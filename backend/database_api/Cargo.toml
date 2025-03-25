@@ -1,0 +1,9 @@
+[package]
+name = "database_api"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+sqlx = "0.8.3"
+anisong_api = { path = "../anisong_api" }
+serde = "1.0.219"

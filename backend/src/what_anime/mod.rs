@@ -1,6 +1,6 @@
-use crate::anisong::AnisongAPI;
-use crate::database::Database;
-use crate::spotify::{self, SpotifyAPI};
+use anisong_api::AnisongAPI;
+use database_api::Database;
+use spotify_api::SpotifyAPI;
 
 pub struct WhatAnime<D, S, A>
 where

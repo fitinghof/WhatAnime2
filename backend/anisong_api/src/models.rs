@@ -11,35 +11,45 @@ use sqlx::{
 
 use crate::error::Error;
 
-#[derive(Serialize, Deserialize, Debug, Clone)]
+#[derive(Serialize, Deserialize, Debug, Clone, FromRow)]
 #[serde(rename_all = "camelCase")]
 pub struct AnisongAnime {
     pub ann_id: AnnAnimeID,
-    pub ann_song_id: SongAnnID,
     #[serde(rename = "animeENName")]
-    pub anime_eng_name: String,
+    pub eng_name: String,
     #[serde(rename = "animeJPName")]
-    pub anime_jpn_name: String,
-    pub anime_alt_name: Option<Vec<String>>,
-    pub anime_vintage: Option<String>,
+    pub jpn_name: String,
+    #[serde(rename = "animeAltName")]
+    pub alt_name: Option<Vec<String>>,
+    #[serde(rename = "animeVintage")]
+    pub vintage: Option<String>,
     #[serde(rename = "linked_ids")]
+    #[sqlx(flatten)]
     pub linked_ids: AnimeListLinks,
     pub anime_type: Option<AnimeType>,
     #[serde(rename = "animeCategory")]
+    #[sqlx(flatten)]
     pub anime_index: AnimeIndex,
-    pub song_type: SongIndex,
-    pub song_name: String,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone, FromRow)]
+#[serde(rename_all = "camelCase")]
+pub struct AnisongSong {
+    #[serde(rename = "annSongId")]
+    pub ann_id: SongAnnID,
+    #[serde(rename = "songName")]
+    pub name: String,
     #[serde(rename = "songArtist")]
-    pub song_artist_name: String,
+    pub artist_name: String,
     #[serde(rename = "songComposer")]
-    pub song_composer_name: String,
+    pub composer_name: String,
     #[serde(rename = "songArranger")]
-    pub song_arranger_name: String,
-    pub song_difficulty: Option<f64>,
-    pub song_category: SongCategory,
-    pub song_length: Option<f64>,
+    pub arranger_name: String,
+    #[serde(rename = "songCategory")]
+    pub category: SongCategory,
+    #[serde(rename = "songLength")]
+    pub length: Option<f64>,
     pub is_dub: bool,
-    pub is_rebroadcast: bool,
     #[serde(rename = "HQ")]
     pub hq: Option<String>,
     #[serde(rename = "MQ")]
@@ -50,7 +60,68 @@ pub struct AnisongAnime {
     pub arrangers: Vec<Artist>,
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone)]
+#[derive(Serialize, Deserialize, Debug, Clone, FromRow)]
+#[serde(rename_all = "camelCase")]
+pub struct AnisongBind {
+    #[serde(rename = "annSongId")]
+    pub song_ann_id: SongAnnID,
+    #[serde(rename = "annId")]
+    pub anime_ann_id: AnnAnimeID,
+    #[serde(rename = "songDifficulty")]
+    pub difficulty: Option<f64>,
+    pub song_type: SongIndex,
+    pub is_rebroadcast: bool,
+}
+
+#[derive(Serialize, Debug, Clone, FromRow)]
+pub struct Anisong {
+    #[serde(flatten)]
+    pub anime: AnisongAnime,
+    #[serde(flatten)]
+    pub song: AnisongSong,
+    #[serde(flatten)]
+    pub anisong_bind: AnisongBind,
+}
+
+impl<'de> Deserialize<'de> for Anisong {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        #[derive(Deserialize)]
+        struct Helper {
+            #[serde(flatten)]
+            song: AnisongSong,
+            #[serde(flatten)]
+            anime: AnisongAnime,
+            // For bind
+            #[serde(rename = "songDifficulty")]
+            pub difficulty: Option<f64>,
+            #[serde(rename = "songType")]
+            pub song_type: SongIndex,
+            #[serde(rename = "isRebroadcast")]
+            pub is_rebroadcast: bool,
+        }
+
+        let data = Helper::deserialize(deserializer)?;
+        let song_ann_id = data.song.ann_id;
+        let anime_ann_id = data.anime.ann_id;
+
+        Ok(Self {
+            song: data.song,
+            anime: data.anime,
+            anisong_bind: AnisongBind {
+                song_ann_id,
+                anime_ann_id,
+                difficulty: data.difficulty,
+                song_type: data.song_type,
+                is_rebroadcast: data.is_rebroadcast,
+            },
+        })
+    }
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone, FromRow)]
 pub struct Artist {
     pub id: AnisongArtistID,
     pub names: Vec<String>,
@@ -59,11 +130,15 @@ pub struct Artist {
     pub members: Option<Vec<Artist>>,
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone)]
+#[derive(Serialize, Deserialize, Debug, Clone, FromRow)]
 pub struct AnimeListLinks {
+    #[sqlx(rename = "myanimelist_id")]
     pub myanimelist: Option<MyAnimeListAnimeID>,
+    #[sqlx(rename = "anidb_id")]
     pub anidb: Option<AniDBAnimeID>,
+    #[sqlx(rename = "anilist_id")]
     pub anilist: Option<AnilistAnimeID>,
+    #[sqlx(rename = "kitsu_id")]
     pub kitsu: Option<KitsuAnimeID>,
 }
 
@@ -129,12 +204,6 @@ impl<'de> Deserialize<'de> for SongIndex {
     Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Serialize, Deserialize, Hash, FromRow, Type,
 )]
 #[sqlx(transparent)]
-pub struct ArtistAnnId(i32);
-
-#[derive(
-    Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Serialize, Deserialize, Hash, FromRow, Type,
-)]
-#[sqlx(transparent)]
 pub struct AnilistAnimeID(i32);
 
 #[derive(
@@ -171,7 +240,7 @@ pub struct SongAnnID(i32);
     Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Serialize, Deserialize, Hash, FromRow, Type,
 )]
 #[sqlx(transparent)]
-pub struct AnisongArtistID(i32);
+pub struct AnisongArtistID(pub i32);
 
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq)]
 pub enum AnimeType {
@@ -345,6 +414,7 @@ impl sqlx::Type<sqlx::Postgres> for SongIndexType {
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq)]
 pub enum SongCategory {
     Standard,
+    Instrumental,
     Character,
     Chanting,
 }
@@ -367,6 +437,7 @@ impl<'r> sqlx::Decode<'r, sqlx::Postgres> for SongCategory {
             "standard" => Ok(Self::Standard),
             "character" => Ok(Self::Character),
             "chanting" => Ok(Self::Chanting),
+            "isntrumental" => Ok(Self::Instrumental),
             _ => Err(format!("Error Parsing: {}", s).into()),
         }
     }
@@ -381,6 +452,7 @@ impl<'q> sqlx::Encode<'q, sqlx::Postgres> for SongCategory {
             Self::Standard => "standard",
             Self::Character => "character",
             Self::Chanting => "chanting",
+            Self::Instrumental => "instrumental",
         };
         <&str as sqlx::Encode<sqlx::Postgres>>::encode(&s, buf)
     }
@@ -406,7 +478,7 @@ fn split_string<T: FromStr>(input: &str) -> (String, Option<T>) {
 
 #[cfg(test)]
 mod tests {
-    use super::AnisongAnime;
+    use super::Anisong;
     const TEST_INPUT: &str = include_str!("testParse1.txt");
     const TEST_INPUT2: &str = include_str!("testParse2.txt");
     const TEST_INPUT3: &str = include_str!("testParse3.txt");
@@ -414,18 +486,18 @@ mod tests {
     #[test]
     fn test_parse() {
         // General Parsing
-        let _: Vec<AnisongAnime> = serde_json::from_str(TEST_INPUT).expect("Parsing Failed");
-        let _: Vec<AnisongAnime> = serde_json::from_str(TEST_INPUT2).expect("Parsing Failed");
+        let _: Vec<Anisong> = serde_json::from_str(TEST_INPUT).expect("Parsing Failed");
+        let _: Vec<Anisong> = serde_json::from_str(TEST_INPUT2).expect("Parsing Failed");
 
         // Checks to make sure that Options aren't just ommited due to missnaming or something
-        let anime: AnisongAnime = serde_json::from_str(TEST_INPUT3).expect("Parsing Failed");
-        assert!(anime.anime_alt_name.is_some());
-        assert!(anime.anime_type.is_some());
-        assert!(anime.anime_vintage.is_some());
-        assert!(anime.audio.is_some());
-        assert!(anime.hq.is_some());
-        assert!(anime.mq.is_some());
-        assert!(anime.song_difficulty.is_some());
-        assert!(anime.song_length.is_some());
+        let anisong: Anisong = serde_json::from_str(TEST_INPUT3).expect("Parsing Failed");
+        assert!(anisong.anime.alt_name.is_some());
+        assert!(anisong.anime.anime_type.is_some());
+        assert!(anisong.anime.vintage.is_some());
+        assert!(anisong.song.audio.is_some());
+        assert!(anisong.song.hq.is_some());
+        assert!(anisong.song.mq.is_some());
+        assert!(anisong.anisong_bind.difficulty.is_some());
+        assert!(anisong.song.length.is_some());
     }
 }
