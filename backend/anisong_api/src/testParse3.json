@@ -1,0 +1,140 @@
+{
+    "annId": 25057,
+    "annSongId": 41230,
+    "animeENName": "Suzume",
+    "animeJPName": "Suzume no Tojimari",
+    "animeAltName": [
+        "some"
+    ],
+    "animeVintage": "Fall 2022",
+    "linked_ids": {
+        "myanimelist": 50594,
+        "anidb": 17041,
+        "anilist": 142770,
+        "kitsu": 45597
+    },
+    "animeType": "Movie",
+    "animeCategory": "Movie",
+    "songType": "Insert Song",
+    "songName": "Rouge no Dengon",
+    "songArtist": "Yumi Arai",
+    "songComposer": "Yumi Arai",
+    "songArranger": "Masataka Matsutouya",
+    "songDifficulty": 62.0,
+    "songCategory": "Standard",
+    "songLength": 139.44,
+    "isDub": false,
+    "isRebroadcast": false,
+    "HQ": "o0x6c8.webm",
+    "MQ": "some",
+    "audio": "twsuv8.mp3",
+    "artists": [
+        {
+            "id": 1134,
+            "names": [
+                "Yumi Arai",
+                "Yumi Matsutoya",
+                "Karuho Kureda"
+            ],
+            "line_up_id": -1,
+            "groups": [
+                {
+                    "id": 1134,
+                    "names": [
+                        "Yumi Arai",
+                        "Yumi Matsutoya",
+                        "Karuho Kureda"
+                    ],
+                    "line_up_id": -1,
+                    "groups": null,
+                    "members": null
+                }
+            ],
+            "members": [
+                {
+                    "id": 1134,
+                    "names": [
+                        "Yumi Arai",
+                        "Yumi Matsutoya",
+                        "Karuho Kureda"
+                    ],
+                    "line_up_id": -1,
+                    "groups": null,
+                    "members": null
+                }
+            ]
+        }
+    ],
+    "composers": [
+        {
+            "id": 1134,
+            "names": [
+                "Yumi Arai",
+                "Yumi Matsutoya",
+                "Karuho Kureda"
+            ],
+            "line_up_id": -1,
+            "groups": [
+                {
+                    "id": 1134,
+                    "names": [
+                        "Yumi Arai",
+                        "Yumi Matsutoya",
+                        "Karuho Kureda"
+                    ],
+                    "line_up_id": -1,
+                    "groups": null,
+                    "members": null
+                }
+            ],
+            "members": [
+                {
+                    "id": 1134,
+                    "names": [
+                        "Yumi Arai",
+                        "Yumi Matsutoya",
+                        "Karuho Kureda"
+                    ],
+                    "line_up_id": -1,
+                    "groups": null,
+                    "members": null
+                }
+            ]
+        }
+    ],
+    "arrangers": [
+        {
+            "id": 11072,
+            "names": [
+                "Masataka Matsutouya"
+            ],
+            "line_up_id": -1,
+            "groups": [
+                {
+                    "id": 1134,
+                    "names": [
+                        "Yumi Arai",
+                        "Yumi Matsutoya",
+                        "Karuho Kureda"
+                    ],
+                    "line_up_id": -1,
+                    "groups": null,
+                    "members": null
+                }
+            ],
+            "members": [
+                {
+                    "id": 1134,
+                    "names": [
+                        "Yumi Arai",
+                        "Yumi Matsutoya",
+                        "Karuho Kureda"
+                    ],
+                    "line_up_id": -1,
+                    "groups": null,
+                    "members": null
+                }
+            ]
+        }
+    ]
+}

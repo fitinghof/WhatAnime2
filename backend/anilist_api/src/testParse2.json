@@ -1,0 +1,39 @@
+{
+    "id": 1,
+    "meanScore": 86,
+    "bannerImage": "https://s4.anilist.co/file/anilistcdn/media/anime/banner/1-OquNCNB6srGe.jpg",
+    "coverImage": {
+        "color": "#f1785d",
+        "medium": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/small/bx1-CXtrrkMpJ8Zq.png",
+        "large": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx1-CXtrrkMpJ8Zq.png",
+        "extraLarge": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/large/bx1-CXtrrkMpJ8Zq.png"
+    },
+    "format": "TV",
+    "genres": [
+        "Action"
+    ],
+    "source": "ORIGINAL",
+    "studios": {
+        "nodes": [
+            {
+                "id": 23,
+                "name": "Bandai Visual",
+                "siteUrl": "https://anilist.co/studio/23"
+            }
+        ]
+    },
+    "tags": [
+        {
+            "id": 63,
+            "name": "Space"
+        }
+    ],
+    "trailer": {
+        "id": "OhNwckCLzis",
+        "site": "youtube",
+        "thumbnail": "https://i.ytimg.com/vi/OhNwckCLzis/hqdefault.jpg"
+    },
+    "episodes": 26,
+    "season": "SPRING",
+    "seasonYear": 1998
+}

@@ -7,6 +7,7 @@ edition = "2024"
 anisong_api = { path = "anisong_api" }
 database_api = { path = "database_api" }
 spotify_api = { path = "spotify_api" }
+anilist_api = { path = "anilist_api" }
 env_logger = "0.11.7"
 futures = "0.3.31"
 log = "0.4.26"

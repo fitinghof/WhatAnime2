@@ -24,6 +24,18 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "683d7910e743518b0e34f1186f92494becacb047c7b6bf616c96772180fef923"
 
 [[package]]
+name = "anilist_api"
+version = "0.1.0"
+dependencies = [
+ "log",
+ "reqwest",
+ "serde",
+ "serde_json",
+ "sqlx",
+ "tokio",
+]
+
+[[package]]
 name = "anisong_api"
 version = "0.1.0"
 dependencies = [
@@ -31,6 +43,7 @@ dependencies = [
  "log",
  "reqwest",
  "serde",
+ "serde_json",
  "sqlx",
 ]
 
@@ -217,9 +230,11 @@ dependencies = [
 name = "database_api"
 version = "0.1.0"
 dependencies = [
+ "anilist_api",
  "anisong_api",
  "serde",
  "sqlx",
+ "tokio",
 ]
 
 [[package]]
@@ -1894,7 +1909,19 @@ dependencies = [
  "mio",
  "pin-project-lite",
  "socket2",
+ "tokio-macros",
  "windows-sys 0.52.0",
+]
+
+[[package]]
+name = "tokio-macros"
+version = "2.5.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "6e06d43f1345a3bcd39f6a56dbb7dcab2ba47e68e8ac134855e7e2bdbaf8cab8"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn",
 ]
 
 [[package]]

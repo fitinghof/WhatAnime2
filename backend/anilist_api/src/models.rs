@@ -1,9 +1,10 @@
-use reqwest::Client;
 use serde::{Deserialize, Serialize};
-use serde_json::json;
-use sqlx::{FromRow, Type};
-// use serde_json::to_string;
-
+use sqlx::{
+    FromRow, Row, Type,
+    encode::IsNull,
+    error::BoxDynError,
+    postgres::{PgRow, PgTypeInfo, PgValueRef},
+};
 #[derive(
     Debug, PartialEq, Eq, PartialOrd, Ord, Hash, FromRow, Deserialize, Serialize, Clone, Copy, Type,
 )]
@@ -16,7 +17,7 @@ impl From<i32> for AnilistID {
     }
 }
 
-#[derive(Deserialize, Serialize, FromRow, Debug)]
+#[derive(Deserialize, Serialize, FromRow, Debug, Clone)]
 pub struct MediaTitle {
     pub romaji: Option<String>,
     pub english: Option<String>,
@@ -35,7 +36,7 @@ pub struct ImageURL(URL);
 #[sqlx(transparent)]
 pub struct HexColor(String);
 
-#[derive(Deserialize, Serialize, FromRow, Clone, Debug)]
+#[derive(Deserialize, Serialize, FromRow, Clone, Debug, Default)]
 pub struct CoverImage {
     pub color: Option<HexColor>,
     pub medium: Option<ImageURL>,
@@ -58,6 +59,52 @@ pub enum MediaFormat {
     Manga,
     Novel,
     OneShot,
+}
+
+impl<'r> sqlx::Decode<'r, sqlx::Postgres> for MediaFormat {
+    fn decode(value: PgValueRef<'r>) -> Result<Self, BoxDynError> {
+        let s = <&str as sqlx::Decode<sqlx::Postgres>>::decode(value)?;
+        match s {
+            "tv" => Ok(Self::Tv),
+            "tv_short" => Ok(Self::TvShort),
+            "movie" => Ok(Self::Movie),
+            "special" => Ok(Self::Special),
+            "ova" => Ok(Self::Ova),
+            "ona" => Ok(Self::Ona),
+            "music" => Ok(Self::Music),
+            "manga" => Ok(Self::Manga),
+            "novel" => Ok(Self::Novel),
+            "one_shot" => Ok(Self::OneShot),
+            _ => Err(format!("Error Parsing: {}", s).into()),
+        }
+    }
+}
+
+impl<'q> sqlx::Encode<'q, sqlx::Postgres> for MediaFormat {
+    fn encode_by_ref(
+        &self,
+        buf: &mut <sqlx::Postgres as sqlx::Database>::ArgumentBuffer<'q>,
+    ) -> Result<IsNull, BoxDynError> {
+        let s = match self {
+            Self::Tv => "tv",
+            Self::TvShort => "tv_short",
+            Self::Movie => "movie",
+            Self::Special => "special",
+            Self::Ova => "ova",
+            Self::Ona => "ona",
+            Self::Music => "music",
+            Self::Manga => "manga",
+            Self::Novel => "novel",
+            Self::OneShot => "one_shot",
+        };
+        <&str as sqlx::Encode<sqlx::Postgres>>::encode(&s, buf)
+    }
+}
+
+impl sqlx::Type<sqlx::Postgres> for MediaFormat {
+    fn type_info() -> PgTypeInfo {
+        PgTypeInfo::with_name("media_format")
+    }
 }
 
 //#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Deserialize, Serialize, Clone)]
@@ -84,6 +131,62 @@ pub enum MediaSource {
     PictureBook,
 }
 
+impl<'r> sqlx::Decode<'r, sqlx::Postgres> for MediaSource {
+    fn decode(value: PgValueRef<'r>) -> Result<Self, BoxDynError> {
+        let s = <&str as sqlx::Decode<sqlx::Postgres>>::decode(value)?;
+        match s {
+            "original" => Ok(Self::Original),
+            "manga" => Ok(Self::Manga),
+            "light_novel" => Ok(Self::LightNovel),
+            "visual_novel" => Ok(Self::VisualNovel),
+            "video_game" => Ok(Self::VideoGame),
+            "other" => Ok(Self::Other),
+            "novel" => Ok(Self::Novel),
+            "doujinshi" => Ok(Self::Doujinshi),
+            "anime" => Ok(Self::Anime),
+            "web_novel" => Ok(Self::WebNovel),
+            "live_action" => Ok(Self::LiveAction),
+            "game" => Ok(Self::Game),
+            "comic" => Ok(Self::Comic),
+            "multi_media_project" => Ok(Self::MultimediaProject),
+            "picture_book" => Ok(Self::PictureBook),
+            _ => Err(format!("Error Parsing: {}", s).into()),
+        }
+    }
+}
+
+impl<'q> sqlx::Encode<'q, sqlx::Postgres> for MediaSource {
+    fn encode_by_ref(
+        &self,
+        buf: &mut <sqlx::Postgres as sqlx::Database>::ArgumentBuffer<'q>,
+    ) -> Result<IsNull, BoxDynError> {
+        let s = match self {
+            Self::Original => "original",
+            Self::Manga => "manga",
+            Self::LightNovel => "light_novel",
+            Self::VisualNovel => "visual_novel",
+            Self::VideoGame => "video_game",
+            Self::Other => "other",
+            Self::Novel => "novel",
+            Self::Doujinshi => "doujinshi",
+            Self::Anime => "anime",
+            Self::WebNovel => "web_novel",
+            Self::LiveAction => "live_action",
+            Self::Game => "game",
+            Self::Comic => "comic",
+            Self::MultimediaProject => "multi_media_project",
+            Self::PictureBook => "picture_book",
+        };
+        <&str as sqlx::Encode<sqlx::Postgres>>::encode(&s, buf)
+    }
+}
+
+impl sqlx::Type<sqlx::Postgres> for MediaSource {
+    fn type_info() -> PgTypeInfo {
+        PgTypeInfo::with_name("media_source")
+    }
+}
+
 #[derive(Debug, Deserialize, Serialize, Clone)]
 #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
 pub enum ReleaseSeason {
@@ -91,6 +194,40 @@ pub enum ReleaseSeason {
     Spring,
     Summer,
     Fall,
+}
+
+impl<'r> sqlx::Decode<'r, sqlx::Postgres> for ReleaseSeason {
+    fn decode(value: PgValueRef<'r>) -> Result<Self, BoxDynError> {
+        let s = <&str as sqlx::Decode<sqlx::Postgres>>::decode(value)?;
+        match s {
+            "winter" => Ok(Self::Winter),
+            "spring" => Ok(Self::Spring),
+            "summer" => Ok(Self::Summer),
+            "fall" => Ok(Self::Fall),
+            _ => Err(format!("Error Parsing: {}", s).into()),
+        }
+    }
+}
+
+impl<'q> sqlx::Encode<'q, sqlx::Postgres> for ReleaseSeason {
+    fn encode_by_ref(
+        &self,
+        buf: &mut <sqlx::Postgres as sqlx::Database>::ArgumentBuffer<'q>,
+    ) -> Result<IsNull, BoxDynError> {
+        let s = match self {
+            Self::Winter => "winter",
+            Self::Spring => "spring",
+            Self::Summer => "summer",
+            Self::Fall => "fall",
+        };
+        <&str as sqlx::Encode<sqlx::Postgres>>::encode(&s, buf)
+    }
+}
+
+impl sqlx::Type<sqlx::Postgres> for ReleaseSeason {
+    fn type_info() -> PgTypeInfo {
+        PgTypeInfo::with_name("release_season")
+    }
 }
 
 #[derive(
@@ -107,10 +244,32 @@ pub struct Studio {
     pub site_url: Option<URL>,
 }
 
-#[derive(Deserialize, Serialize, FromRow, Debug)]
+#[derive(Deserialize, Serialize, Debug, Clone, Default)]
+#[serde(default)]
 pub struct StudioConnection {
     // edges: StudioEdge
     pub nodes: Vec<Studio>, // pageInfo: PageInfo
+}
+impl FromRow<'_, PgRow> for StudioConnection {
+    fn from_row(row: &PgRow) -> Result<Self, sqlx::Error> {
+        let ids: Vec<i32> = row.try_get("studio_ids")?;
+        let names: Vec<String> = row.try_get("studio_names")?;
+        let urls: Vec<Option<URL>> = row.try_get("studio_urls")?;
+        let mut studios = Vec::with_capacity(ids.len());
+        for (id, name, url) in ids
+            .into_iter()
+            .zip(names.into_iter())
+            .zip(urls.into_iter())
+            .map(|((i, n), u)| (i, n, u))
+        {
+            studios.push(Studio {
+                id,
+                name,
+                site_url: url,
+            });
+        }
+        Ok(StudioConnection { nodes: studios })
+    }
 }
 #[derive(
     Debug, PartialEq, Eq, PartialOrd, Ord, Hash, FromRow, Deserialize, Serialize, Type, Clone,
@@ -130,21 +289,24 @@ pub struct MediaTrailer {
     pub thumbnail: ImageURL,
 }
 
-#[derive(Deserialize, Serialize, FromRow, Debug)]
+#[derive(Deserialize, Serialize, Debug, Clone)]
 pub struct Media {
     pub id: AnilistID,
-    pub title: MediaTitle,
+    // pub title: MediaTitle,
     #[serde(rename = "meanScore")]
     pub mean_score: i32,
     #[serde(rename = "bannerImage")]
     pub banner_image: Option<ImageURL>,
-    #[serde(rename = "coverImage")]
-    pub cover_image: Option<CoverImage>,
+    #[serde(rename = "coverImage", default)]
+    pub cover_image: CoverImage,
     pub format: Option<MediaFormat>,
-    pub genres: Option<Vec<String>>,
-    pub source: Option<String>,
-    pub studios: Option<StudioConnection>,
-    pub tags: Option<Vec<MediaTag>>,
+    #[serde(default)]
+    pub genres: Vec<String>,
+    pub source: Option<MediaSource>,
+    #[serde(default)]
+    pub studios: StudioConnection,
+    #[serde(default)]
+    pub tags: Vec<MediaTag>,
     pub trailer: Option<MediaTrailer>,
     pub episodes: Option<i32>,
     pub season: Option<ReleaseSeason>,
@@ -152,129 +314,29 @@ pub struct Media {
     pub season_year: Option<i32>,
 }
 
-impl Media {
-    pub async fn fetch_one(id: AnilistID) -> Option<Media> {
-        let anime = Self::fetch_many(vec![id]).await;
-        if anime.len() == 1 {
-            Some(anime.into_iter().next().unwrap())
-        } else {
-            None
-        }
-    }
-    pub async fn fetch_many(ids: Vec<AnilistID>) -> Vec<Media> {
-        if ids.is_empty() {
-            return vec![];
-        }
-
-        let mut all_media: Vec<Media> = Vec::new();
-        let mut page = 1;
-        let per_page = 50;
-
-        loop {
-            let json_body = json!({
-                "query": QUERY_STRING,
-                "variables": {
-                    "ids": &ids,
-                    "isMain": false,
-                    "page": page,
-                    "perPage": per_page,
-                }
-            });
-
-            let response = Client::new()
-                .post("https://graphql.anilist.co")
-                .json(&json_body)
-                .send()
-                .await
-                .unwrap();
-
-            if response.status().is_success() {
-                let data: AnilistResponse = response.json().await.unwrap();
-                all_media.extend(data.data.page.media);
-
-                if data.data.page.page_info.is_none_or(|a| !a.has_next_page) {
-                    break;
-                }
-                page += 1;
-            } else {
-                println!("{}", response.text().await.unwrap());
-                break;
-            }
-        }
-        all_media.sort_by(|a, b| a.id.cmp(&b.id));
-        all_media
+impl FromRow<'_, PgRow> for Media {
+    fn from_row(row: &'_ PgRow) -> Result<Self, sqlx::Error> {
+        let tag_ids: Vec<TagID> = row.try_get("tag_ids")?;
+        let tag_names: Vec<String> = row.try_get("tag_names")?;
+        let tags = tag_ids
+            .into_iter()
+            .zip(tag_names.into_iter())
+            .map(|(id, name)| MediaTag { id, name })
+            .collect();
+        Ok(Self {
+            id: row.try_get("anilist_id")?,
+            mean_score: row.try_get("mean_score")?,
+            banner_image: row.try_get("banner_image")?,
+            cover_image: CoverImage::from_row(row)?,
+            format: row.try_get("media_format")?,
+            genres: row.try_get("genres")?,
+            source: row.try_get("media_source")?,
+            studios: StudioConnection::from_row(row)?,
+            tags,
+            trailer: MediaTrailer::from_row(row).ok(),
+            episodes: row.try_get("episodes")?,
+            season: row.try_get("release_season")?,
+            season_year: row.try_get("index")?,
+        })
     }
 }
-
-#[derive(Deserialize, Serialize, FromRow)]
-pub struct PageInfo {
-    #[serde(rename = "hasNextPage")]
-    has_next_page: bool,
-}
-
-#[derive(Deserialize, Serialize, FromRow)]
-pub struct MediaList {
-    media: Vec<Media>,
-    #[serde(rename = "pageInfo")]
-    page_info: Option<PageInfo>,
-}
-
-#[derive(Deserialize, Serialize, FromRow)]
-pub struct PageData {
-    #[serde(rename = "Page")]
-    page: MediaList,
-}
-
-#[derive(Deserialize, Serialize, FromRow)]
-pub struct AnilistResponse {
-    pub data: PageData,
-}
-
-const QUERY_STRING: &str = r#"
-query ($ids: [Int] = [170695], $isMain: Boolean = true, $version: Int = 3, $page: Int, $perPage: Int) {
-	Page(page: $page, perPage: $perPage) {
-		media(id_in: $ids) {
-			id
-			title {
-				romaji
-				english
-				native
-			}
-			averageScore
-			bannerImage
-			coverImage {
-				medium
-				large
-				extraLarge
-				color
-			}
-			format
-			genres
-			meanScore
-			source(version: $version)
-			studios(isMain: $isMain) {
-				nodes {
-					name
-					id
-					siteUrl
-				}
-			}
-			tags {
-				id
-				name
-			}
-			trailer {
-				site
-				thumbnail
-				id
-			}
-			episodes
-    season
-    seasonYear
-  }
-  pageInfo {
-    hasNextPage
-  }
-}
-}
-"#;

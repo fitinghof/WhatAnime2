@@ -48,6 +48,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "anilist_api"
+version = "0.1.0"
+dependencies = [
+ "log",
+ "reqwest",
+ "serde",
+ "serde_json",
+ "sqlx",
+ "tokio",
+]
+
+[[package]]
 name = "anisong_api"
 version = "0.1.0"
 dependencies = [
@@ -134,6 +146,7 @@ checksum = "ace50bade8e6234aa140d9a2f552bbee1db4d353f69b8217bc503490fc1a9f26"
 name = "backend"
 version = "0.1.0"
 dependencies = [
+ "anilist_api",
  "anisong_api",
  "database_api",
  "env_logger",
@@ -327,9 +340,11 @@ dependencies = [
 name = "database_api"
 version = "0.1.0"
 dependencies = [
+ "anilist_api",
  "anisong_api",
  "serde",
  "sqlx",
+ "tokio",
 ]
 
 [[package]]

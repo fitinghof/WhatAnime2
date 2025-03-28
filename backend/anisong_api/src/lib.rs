@@ -7,11 +7,18 @@ pub use anisong_api::AnisongAPIR;
 use models::{Anisong, AnisongArtistID};
 
 pub trait AnisongAPI {
-    async fn artist_id_search(&self, ids: Vec<AnisongArtistID>) -> Result<Vec<Anisong>>;
-    async fn full_search(&self, song_title: String, artist_names: Vec<String>) -> Vec<Anisong>;
-    async fn get_exact_song(
+    fn artist_id_search(
+        &self,
+        ids: Vec<AnisongArtistID>,
+    ) -> impl std::future::Future<Output = Result<Vec<Anisong>>> + Send;
+    fn full_search(
+        &self,
+        song_title: String,
+        artist_names: Vec<String>,
+    ) -> impl std::future::Future<Output = Vec<Anisong>> + Send;
+    fn get_exact_song(
         &self,
         song_title: String,
         artist_ids: Vec<AnisongArtistID>,
-    ) -> Result<Vec<Anisong>>;
+    ) -> impl std::future::Future<Output = Result<Vec<Anisong>>> + Send;
 }

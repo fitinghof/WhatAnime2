@@ -1,0 +1,439 @@
+[
+    {
+        "annId": 25057,
+        "annSongId": 41230,
+        "animeENName": "Suzume",
+        "animeJPName": "Suzume no Tojimari",
+        "animeAltName": null,
+        "animeVintage": "Fall 2022",
+        "linked_ids": {
+            "myanimelist": 50594,
+            "anidb": 17041,
+            "anilist": 142770,
+            "kitsu": 45597
+        },
+        "animeType": "Movie",
+        "animeCategory": "Movie",
+        "songType": "Insert Song",
+        "songName": "Rouge no Dengon",
+        "songArtist": "Yumi Arai",
+        "songComposer": "Yumi Arai",
+        "songArranger": "Masataka Matsutouya",
+        "songDifficulty": 62.0,
+        "songCategory": "Standard",
+        "songLength": 139.44,
+        "isDub": false,
+        "isRebroadcast": false,
+        "HQ": "o0x6c8.webm",
+        "MQ": null,
+        "audio": "twsuv8.mp3",
+        "artists": [
+            {
+                "id": 1134,
+                "names": [
+                    "Yumi Arai",
+                    "Yumi Matsutoya",
+                    "Karuho Kureda"
+                ],
+                "line_up_id": -1,
+                "groups": null,
+                "members": null
+            }
+        ],
+        "composers": [
+            {
+                "id": 1134,
+                "names": [
+                    "Yumi Arai",
+                    "Yumi Matsutoya",
+                    "Karuho Kureda"
+                ],
+                "line_up_id": -1,
+                "groups": null,
+                "members": null
+            }
+        ],
+        "arrangers": [
+            {
+                "id": 11072,
+                "names": [
+                    "Masataka Matsutouya"
+                ],
+                "line_up_id": -1,
+                "groups": null,
+                "members": null
+            }
+        ]
+    },
+    {
+        "annId": 25057,
+        "annSongId": 41231,
+        "animeENName": "Suzume",
+        "animeJPName": "Suzume no Tojimari",
+        "animeAltName": null,
+        "animeVintage": "Fall 2022",
+        "linked_ids": {
+            "myanimelist": 50594,
+            "anidb": 17041,
+            "anilist": 142770,
+            "kitsu": 45597
+        },
+        "animeType": "Movie",
+        "animeCategory": "Movie",
+        "songType": "Insert Song",
+        "songName": "SWEET MEMORIES (Re-Mix Version)",
+        "songArtist": "Seiko Matsuda",
+        "songComposer": "Masaaki Oomura",
+        "songArranger": "Masaaki Oomura",
+        "songDifficulty": 22.0,
+        "songCategory": "Standard",
+        "songLength": 29.88,
+        "isDub": false,
+        "isRebroadcast": false,
+        "HQ": "wfygez.webm",
+        "MQ": null,
+        "audio": "rdzds4.mp3",
+        "artists": [
+            {
+                "id": 614,
+                "names": [
+                    "Seiko Matsuda",
+                    "Paw Paw"
+                ],
+                "line_up_id": -1,
+                "groups": null,
+                "members": null
+            }
+        ],
+        "composers": [
+            {
+                "id": 11303,
+                "names": [
+                    "Masaaki Oomura"
+                ],
+                "line_up_id": -1,
+                "groups": null,
+                "members": null
+            }
+        ],
+        "arrangers": [
+            {
+                "id": 11303,
+                "names": [
+                    "Masaaki Oomura"
+                ],
+                "line_up_id": -1,
+                "groups": null,
+                "members": null
+            }
+        ]
+    },
+    {
+        "annId": 25057,
+        "annSongId": 41232,
+        "animeENName": "Suzume",
+        "animeJPName": "Suzume no Tojimari",
+        "animeAltName": null,
+        "animeVintage": "Fall 2022",
+        "linked_ids": {
+            "myanimelist": 50594,
+            "anidb": 17041,
+            "anilist": 142770,
+            "kitsu": 45597
+        },
+        "animeType": "Movie",
+        "animeCategory": "Movie",
+        "songType": "Insert Song",
+        "songName": "Yume no Naka e",
+        "songArtist": "Yosui Inoue",
+        "songComposer": "Yosui Inoue",
+        "songArranger": "Katsu Hoshi",
+        "songDifficulty": 38.0,
+        "songCategory": "Standard",
+        "songLength": 76.104,
+        "isDub": false,
+        "isRebroadcast": false,
+        "HQ": "xj7jwo.webm",
+        "MQ": null,
+        "audio": "9la1e0.mp3",
+        "artists": [
+            {
+                "id": 2179,
+                "names": [
+                    "Yosui Inoue"
+                ],
+                "line_up_id": -1,
+                "groups": null,
+                "members": null
+            }
+        ],
+        "composers": [
+            {
+                "id": 2179,
+                "names": [
+                    "Yosui Inoue"
+                ],
+                "line_up_id": -1,
+                "groups": null,
+                "members": null
+            }
+        ],
+        "arrangers": [
+            {
+                "id": 10625,
+                "names": [
+                    "Katsu Hoshi"
+                ],
+                "line_up_id": -1,
+                "groups": null,
+                "members": null
+            }
+        ]
+    },
+    {
+        "annId": 25057,
+        "annSongId": 41233,
+        "animeENName": "Suzume",
+        "animeJPName": "Suzume no Tojimari",
+        "animeAltName": null,
+        "animeVintage": "Fall 2022",
+        "linked_ids": {
+            "myanimelist": 50594,
+            "anidb": 17041,
+            "anilist": 142770,
+            "kitsu": 45597
+        },
+        "animeType": "Movie",
+        "animeCategory": "Movie",
+        "songType": "Ending 1",
+        "songName": "Kanata Haruka",
+        "songArtist": "RADWIMPS",
+        "songComposer": "Yojiro Noda",
+        "songArranger": "RADWIMPS",
+        "songDifficulty": 42.0,
+        "songCategory": "Standard",
+        "songLength": 231.24,
+        "isDub": false,
+        "isRebroadcast": false,
+        "HQ": "6bnirz.webm",
+        "MQ": null,
+        "audio": "98t7fy.mp3",
+        "artists": [
+            {
+                "id": 6736,
+                "names": [
+                    "RADWIMPS",
+                    "Misoshiru's"
+                ],
+                "line_up_id": 0,
+                "groups": null,
+                "members": [
+                    {
+                        "id": 14001,
+                        "names": [
+                            "Yojiro Noda",
+                            "John Jirou"
+                        ],
+                        "line_up_id": null,
+                        "groups": null,
+                        "members": null
+                    }
+                ]
+            }
+        ],
+        "composers": [
+            {
+                "id": 14001,
+                "names": [
+                    "Yojiro Noda",
+                    "John Jirou"
+                ],
+                "line_up_id": -1,
+                "groups": [
+                    {
+                        "id": 6736,
+                        "names": [
+                            "RADWIMPS",
+                            "Misoshiru's"
+                        ],
+                        "line_up_id": null,
+                        "groups": null,
+                        "meFmbers": null
+                    }
+                ],
+                "members": null
+            }
+        ],
+        "arrangers": [
+            {
+                "id": 6736,
+                "names": [
+                    "RADWIMPS",
+                    "Misoshiru's"
+                ],
+                "line_up_id": -1,
+                "groups": null,
+                "members": [
+                    {
+                        "id": 14001,
+                        "names": [
+                            "Yojiro Noda",
+                            "John Jirou"
+                        ],
+                        "line_up_id": null,
+                        "groups": null,
+                        "members": null
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "annId": 25057,
+        "annSongId": 41234,
+        "animeENName": "Suzume",
+        "animeJPName": "Suzume no Tojimari",
+        "animeAltName": null,
+        "animeVintage": "Fall 2022",
+        "linked_ids": {
+            "myanimelist": 50594,
+            "anidb": 17041,
+            "anilist": 142770,
+            "kitsu": 45597
+        },
+        "animeType": "Movie",
+        "animeCategory": "Movie",
+        "songType": "Ending 2",
+        "songName": "Suzume",
+        "songArtist": "RADWIMPS feat. Toaka",
+        "songComposer": "Yojiro Noda",
+        "songArranger": "RADWIMPS",
+        "songDifficulty": 48.0,
+        "songCategory": "Standard",
+        "songLength": 234.816,
+        "isDub": false,
+        "isRebroadcast": false,
+        "HQ": "dp5tbe.webm",
+        "MQ": null,
+        "audio": "1nz1gy.mp3",
+        "artists": [
+            {
+                "id": 19059,
+                "names": [
+                    "Toaka"
+                ],
+                "line_up_id": -1,
+                "groups": null,
+                "members": null
+            }
+        ],
+        "composers": [
+            {
+                "id": 14001,
+                "names": [
+                    "Yojiro Noda",
+                    "John Jirou"
+                ],
+                "line_up_id": -1,
+                "groups": [
+                    {
+                        "id": 6736,
+                        "names": [
+                            "RADWIMPS",
+                            "Misoshiru's"
+                        ],
+                        "line_up_id": null,
+                        "groups": null,
+                        "members": null
+                    }
+                ],
+                "members": null
+            }
+        ],
+        "arrangers": [
+            {
+                "id": 6736,
+                "names": [
+                    "RADWIMPS",
+                    "Misoshiru's"
+                ],
+                "line_up_id": -1,
+                "groups": null,
+                "members": [
+                    {
+                        "id": 14001,
+                        "names": [
+                            "Yojiro Noda",
+                            "John Jirou"
+                        ],
+                        "line_up_id": null,
+                        "groups": null,
+                        "members": null
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "annId": 25057,
+        "annSongId": 41235,
+        "animeENName": "Suzume",
+        "animeJPName": "Suzume no Tojimari",
+        "animeAltName": null,
+        "animeVintage": "Fall 2022",
+        "linked_ids": {
+            "myanimelist": 50594,
+            "anidb": 17041,
+            "anilist": 142770,
+            "kitsu": 45597
+        },
+        "animeType": "Movie",
+        "animeCategory": "Movie",
+        "songType": "Insert Song",
+        "songName": "Kenka o Yamete",
+        "songArtist": "Naoko Kawai",
+        "songComposer": "Mariya Takeuchi",
+        "songArranger": "Nobuyuki Shimizu",
+        "songDifficulty": 21.0,
+        "songCategory": "Standard",
+        "songLength": 87.576,
+        "isDub": false,
+        "isRebroadcast": false,
+        "HQ": "kj5lhm.webm",
+        "MQ": null,
+        "audio": "4pyklu.mp3",
+        "artists": [
+            {
+                "id": 1198,
+                "names": [
+                    "Naoko Kawai"
+                ],
+                "line_up_id": -1,
+                "groups": null,
+                "members": null
+            }
+        ],
+        "composers": [
+            {
+                "id": 3800,
+                "names": [
+                    "Mariya Takeuchi"
+                ],
+                "line_up_id": -1,
+                "groups": null,
+                "members": null
+            }
+        ],
+        "arrangers": [
+            {
+                "id": 10823,
+                "names": [
+                    "Nobuyuki Shimizu"
+                ],
+                "line_up_id": -1,
+                "groups": null,
+                "members": null
+            }
+        ]
+    }
+]

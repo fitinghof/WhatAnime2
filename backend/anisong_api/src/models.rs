@@ -1,12 +1,12 @@
 use std::str::FromStr;
 
-use serde::{Deserialize, Serialize};
+use serde::{Deserialize, Deserializer, Serialize};
 
 use sqlx::{
-    FromRow, Type,
+    FromRow, Row, Type,
     encode::IsNull,
     error::BoxDynError,
-    postgres::{PgTypeInfo, PgValueRef},
+    postgres::{PgRow, PgTypeInfo, PgValueRef},
 };
 
 use crate::error::Error;
@@ -19,8 +19,9 @@ pub struct AnisongAnime {
     pub eng_name: String,
     #[serde(rename = "animeJPName")]
     pub jpn_name: String,
+    #[serde(default, deserialize_with = "empty_vec_if_null")]
     #[serde(rename = "animeAltName")]
-    pub alt_name: Option<Vec<String>>,
+    pub alt_name: Vec<String>,
     #[serde(rename = "animeVintage")]
     pub vintage: Option<String>,
     #[serde(rename = "linked_ids")]
@@ -35,8 +36,6 @@ pub struct AnisongAnime {
 #[derive(Serialize, Deserialize, Debug, Clone, FromRow)]
 #[serde(rename_all = "camelCase")]
 pub struct AnisongSong {
-    #[serde(rename = "annSongId")]
-    pub ann_id: SongAnnID,
     #[serde(rename = "songName")]
     pub name: String,
     #[serde(rename = "songArtist")]
@@ -63,8 +62,9 @@ pub struct AnisongSong {
 #[derive(Serialize, Deserialize, Debug, Clone, FromRow)]
 #[serde(rename_all = "camelCase")]
 pub struct AnisongBind {
+    // Song id is internal so keep that in mind
     #[serde(rename = "annSongId")]
-    pub song_ann_id: SongAnnID,
+    pub song_ann_id: SongAnnId,
     #[serde(rename = "annId")]
     pub anime_ann_id: AnnAnimeID,
     #[serde(rename = "songDifficulty")]
@@ -101,17 +101,18 @@ impl<'de> Deserialize<'de> for Anisong {
             pub song_type: SongIndex,
             #[serde(rename = "isRebroadcast")]
             pub is_rebroadcast: bool,
+            #[serde(rename = "annSongId")]
+            pub song_ann_id: SongAnnId,
         }
 
         let data = Helper::deserialize(deserializer)?;
-        let song_ann_id = data.song.ann_id;
         let anime_ann_id = data.anime.ann_id;
 
         Ok(Self {
             song: data.song,
             anime: data.anime,
             anisong_bind: AnisongBind {
-                song_ann_id,
+                song_ann_id: data.song_ann_id,
                 anime_ann_id,
                 difficulty: data.difficulty,
                 song_type: data.song_type,
@@ -121,13 +122,66 @@ impl<'de> Deserialize<'de> for Anisong {
     }
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone, FromRow)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Artist {
     pub id: AnisongArtistID,
     pub names: Vec<String>,
     pub line_up_id: Option<i32>,
-    pub groups: Option<Vec<Artist>>,
-    pub members: Option<Vec<Artist>>,
+    #[serde(default, deserialize_with = "empty_vec_if_null")]
+    pub groups: Vec<Artist>,
+    #[serde(default, deserialize_with = "empty_vec_if_null")]
+    pub members: Vec<Artist>,
+}
+
+impl FromRow<'_, PgRow> for Artist {
+    fn from_row(row: &'_ PgRow) -> Result<Self, sqlx::Error> {
+        let id: AnisongArtistID = row.get("artist_id");
+        let names = row.get("names");
+        let line_up_id = row.get("line_up_id");
+        let group_ids: Vec<AnisongArtistID> = row.get("group_ids");
+        let groups_names_json: Vec<sqlx::types::Json<Vec<String>>> = row.get("groups_names");
+        let groups_names: Vec<Vec<String>> = groups_names_json.into_iter().map(|n| n.0).collect();
+        let group_line_up_ids: Vec<Option<i32>> = row.get("group_line_up_ids");
+
+        let groups = group_ids
+            .into_iter()
+            .zip(groups_names.into_iter())
+            .zip(group_line_up_ids.into_iter())
+            .map(|((id, names), line_up_id)| Artist {
+                id,
+                names,
+                line_up_id,
+                groups: vec![],
+                members: vec![],
+            })
+            .collect();
+
+        let member_ids: Vec<AnisongArtistID> = row.get("member_ids");
+        let members_names_json: Vec<sqlx::types::Json<Vec<String>>> = row.get("members_names");
+        let members_names: Vec<Vec<String>> = members_names_json.into_iter().map(|n| n.0).collect();
+        let member_line_up_ids: Vec<Option<i32>> = row.get("member_line_up_ids");
+
+        let members = member_ids
+            .into_iter()
+            .zip(members_names.into_iter())
+            .zip(member_line_up_ids.into_iter())
+            .map(|((id, names), line_up_id)| Artist {
+                id,
+                names,
+                line_up_id,
+                groups: vec![],
+                members: vec![],
+            })
+            .collect();
+
+        Ok(Self {
+            id,
+            names,
+            line_up_id,
+            groups,
+            members,
+        })
+    }
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, FromRow)]
@@ -142,7 +196,7 @@ pub struct AnimeListLinks {
     pub kitsu: Option<KitsuAnimeID>,
 }
 
-#[derive(Serialize, Debug, Clone)]
+#[derive(Serialize, Debug, Clone, FromRow)]
 pub struct AnimeIndex {
     pub anime_index_type: AnimeIndexType,
     pub anime_index_number: i32,
@@ -234,13 +288,18 @@ pub struct AnnAnimeID(i32);
     Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Serialize, Deserialize, Hash, FromRow, Type,
 )]
 #[sqlx(transparent)]
-pub struct SongAnnID(i32);
+pub struct SongID(i32);
 
 #[derive(
     Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Serialize, Deserialize, Hash, FromRow, Type,
 )]
 #[sqlx(transparent)]
 pub struct AnisongArtistID(pub i32);
+#[derive(
+    Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Serialize, Deserialize, Hash, FromRow, Type,
+)]
+#[sqlx(transparent)]
+pub struct SongAnnId(pub i32);
 
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq)]
 pub enum AnimeType {
@@ -286,6 +345,12 @@ impl<'q> sqlx::Encode<'q, sqlx::Postgres> for AnimeType {
 impl sqlx::Type<sqlx::Postgres> for AnimeType {
     fn type_info() -> PgTypeInfo {
         PgTypeInfo::with_name("anime_type")
+    }
+}
+
+impl FromRow<'_, PgRow> for AnimeType {
+    fn from_row(row: &'_ PgRow) -> Result<Self, sqlx::Error> {
+        Ok(row.get("anime_type"))
     }
 }
 
@@ -414,20 +479,21 @@ impl sqlx::Type<sqlx::Postgres> for SongIndexType {
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq)]
 pub enum SongCategory {
     Standard,
-    Instrumental,
     Character,
     Chanting,
+    Instrumental,
 }
 
 impl SongCategory {
-    // pub fn from_str(s: &str) -> Result<Self, Error> {
-    //     match s {
-    //         "standard" => Ok(Self::Standard),
-    //         "sharacter" => Ok(Self::Character),
-    //         "shanting" => Ok(Self::Chanting),
-    //         _ => Err(Error::ParseError(s.to_string())),
-    //     }
-    // }
+    pub fn from_str(s: &str) -> Result<Self, Error> {
+        match s {
+            "standard" => Ok(Self::Standard),
+            "character" => Ok(Self::Character),
+            "chanting" => Ok(Self::Chanting),
+            "instrumental" => Ok(Self::Instrumental),
+            _ => Err(Error::ParseError(s.to_string())),
+        }
+    }
 }
 
 impl<'r> sqlx::Decode<'r, sqlx::Postgres> for SongCategory {
@@ -437,7 +503,7 @@ impl<'r> sqlx::Decode<'r, sqlx::Postgres> for SongCategory {
             "standard" => Ok(Self::Standard),
             "character" => Ok(Self::Character),
             "chanting" => Ok(Self::Chanting),
-            "isntrumental" => Ok(Self::Instrumental),
+            "instrumental" => Ok(Self::Instrumental),
             _ => Err(format!("Error Parsing: {}", s).into()),
         }
     }
@@ -464,6 +530,16 @@ impl sqlx::Type<sqlx::Postgres> for SongCategory {
     }
 }
 
+impl FromRow<'_, PgRow> for SongCategory {
+    fn from_row(row: &'_ PgRow) -> Result<Self, sqlx::Error> {
+        let s: String = row.get("song_category");
+        match Self::from_str(&s) {
+            Ok(value) => Ok(value),
+            Err(_) => Err(sqlx::Error::Decode(s.into())),
+        }
+    }
+}
+
 fn split_string<T: FromStr>(input: &str) -> (String, Option<T>) {
     let mut words: Vec<&str> = input.split_whitespace().collect();
     if let Some(last) = words.last() {
@@ -476,22 +552,36 @@ fn split_string<T: FromStr>(input: &str) -> (String, Option<T>) {
     (input.to_owned(), None)
 }
 
+fn empty_vec_if_null<'de, T, D>(deserializer: D) -> Result<Vec<T>, D::Error>
+where
+    T: Deserialize<'de>,
+    D: Deserializer<'de>,
+{
+    let option: Option<Vec<T>> = Option::<Vec<T>>::deserialize(deserializer)?;
+
+    match option {
+        Some(value) => Ok(value),
+        None => Ok(Vec::new()),
+    }
+}
 #[cfg(test)]
 mod tests {
-    use super::Anisong;
-    const TEST_INPUT: &str = include_str!("testParse1.txt");
-    const TEST_INPUT2: &str = include_str!("testParse2.txt");
-    const TEST_INPUT3: &str = include_str!("testParse3.txt");
+    use serde::Deserialize;
+
+    use super::*;
+    const TEST_INPUT: &str = include_str!("testParse1.json");
+    const TEST_INPUT2: &str = include_str!("testParse2.json");
+    const TEST_INPUT3: &str = include_str!("testParse3.json");
 
     #[test]
     fn test_parse() {
-        // General Parsing
         let _: Vec<Anisong> = serde_json::from_str(TEST_INPUT).expect("Parsing Failed");
         let _: Vec<Anisong> = serde_json::from_str(TEST_INPUT2).expect("Parsing Failed");
 
         // Checks to make sure that Options aren't just ommited due to missnaming or something
         let anisong: Anisong = serde_json::from_str(TEST_INPUT3).expect("Parsing Failed");
-        assert!(anisong.anime.alt_name.is_some());
+        assert!(!anisong.anime.alt_name.is_empty());
+        assert!(anisong.anime.alt_name[0] == "some");
         assert!(anisong.anime.anime_type.is_some());
         assert!(anisong.anime.vintage.is_some());
         assert!(anisong.song.audio.is_some());

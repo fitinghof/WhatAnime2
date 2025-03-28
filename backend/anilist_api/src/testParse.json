@@ -1,0 +1,170 @@
+[
+    {
+        "id": 1,
+        "title": {
+            "romaji": "Cowboy Bebop",
+            "english": "Cowboy Bebop",
+            "native": "カウボーイビバップ"
+        },
+        "meanScore": 86,
+        "bannerImage": "https://s4.anilist.co/file/anilistcdn/media/anime/banner/1-OquNCNB6srGe.jpg",
+        "coverImage": {
+            "color": "#f1785d",
+            "medium": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/small/bx1-CXtrrkMpJ8Zq.png",
+            "large": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx1-CXtrrkMpJ8Zq.png",
+            "extraLarge": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/large/bx1-CXtrrkMpJ8Zq.png"
+        },
+        "format": "TV",
+        "genres": [
+            "Action",
+            "Adventure",
+            "Drama",
+            "Sci-Fi"
+        ],
+        "source": "ORIGINAL",
+        "studios": {
+            "nodes": [
+                {
+                    "id": 23,
+                    "name": "Bandai Visual",
+                    "siteUrl": "https://anilist.co/studio/23"
+                },
+                {
+                    "id": 233,
+                    "name": "Bandai Entertainment",
+                    "siteUrl": "https://anilist.co/studio/233"
+                }
+            ]
+        },
+        "tags": [
+            {
+                "id": 63,
+                "name": "Space"
+            },
+            {
+                "id": 648,
+                "name": "Crime"
+            },
+            {
+                "id": 193,
+                "name": "Episodic"
+            },
+            {
+                "id": 105,
+                "name": "Ensemble Cast"
+            },
+            {
+                "id": 109,
+                "name": "Primarily Adult Cast"
+            },
+            {
+                "id": 85,
+                "name": "Tragedy"
+            },
+            {
+                "id": 1310,
+                "name": "Travel"
+            },
+            {
+                "id": 327,
+                "name": "Noir"
+            },
+            {
+                "id": 157,
+                "name": "Guns"
+            },
+            {
+                "id": 108,
+                "name": "Cyberpunk"
+            },
+            {
+                "id": 82,
+                "name": "Male Protagonist"
+            },
+            {
+                "id": 1277,
+                "name": "Found Family"
+            },
+            {
+                "id": 391,
+                "name": "Philosophy"
+            },
+            {
+                "id": 285,
+                "name": "Terrorism"
+            },
+            {
+                "id": 931,
+                "name": "Tomboy"
+            },
+            {
+                "id": 1045,
+                "name": "Heterosexual"
+            },
+            {
+                "id": 1648,
+                "name": "Cowboys"
+            },
+            {
+                "id": 30,
+                "name": "Martial Arts"
+            },
+            {
+                "id": 801,
+                "name": "Cyborg"
+            },
+            {
+                "id": 240,
+                "name": "Amnesia"
+            },
+            {
+                "id": 104,
+                "name": "Anti-Hero"
+            },
+            {
+                "id": 91,
+                "name": "Gambling"
+            },
+            {
+                "id": 199,
+                "name": "Yakuza"
+            },
+            {
+                "id": 489,
+                "name": "Drugs"
+            },
+            {
+                "id": 98,
+                "name": "Female Protagonist"
+            },
+            {
+                "id": 40,
+                "name": "Police"
+            },
+            {
+                "id": 586,
+                "name": "Cult"
+            },
+            {
+                "id": 100,
+                "name": "Nudity"
+            },
+            {
+                "id": 335,
+                "name": "Tanned Skin"
+            },
+            {
+                "id": 476,
+                "name": "Circus"
+            }
+        ],
+        "trailer": {
+            "id": "OhNwckCLzis",
+            "site": "youtube",
+            "thumbnail": "https://i.ytimg.com/vi/OhNwckCLzis/hqdefault.jpg"
+        },
+        "episodes": 26,
+        "season": "SPRING",
+        "seasonYear": 1998
+    }
+]

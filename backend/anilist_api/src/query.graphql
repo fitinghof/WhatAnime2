@@ -1,0 +1,46 @@
+query ($ids: [Int] = [170695], $isMain: Boolean = true, $version: Int = 3, $page: Int, $perPage: Int) {
+	Page(page: $page, perPage: $perPage) {
+		media(id_in: $ids) {
+			id
+			title {
+				romaji
+				english
+				native
+			}
+			averageScore
+			bannerImage
+			coverImage {
+				medium
+				large
+				extraLarge
+				color
+			}
+			format
+			genres
+			meanScore
+			source(version: $version)
+			studios(isMain: $isMain) {
+				nodes {
+					name
+					id
+					siteUrl
+				}
+			}
+			tags {
+				id
+				name
+			}
+			trailer {
+				site
+				thumbnail
+				id
+			}
+			episodes
+			season
+			seasonYear
+		}
+		pageInfo {
+			hasNextPage
+		}
+	}
+}
