@@ -1,4 +1,5 @@
 pub mod models;
+use anisong_api::models::AnilistAnimeID;
 use log::error;
 pub use models::Media;
 use models::*;
@@ -7,10 +8,13 @@ use serde::{Deserialize, Serialize};
 use serde_json::json;
 
 pub trait AnilistAPI {
-    fn fetch_one(&self, id: AnilistID) -> impl std::future::Future<Output = Option<Media>> + Send;
+    fn fetch_one(
+        &self,
+        id: AnilistAnimeID,
+    ) -> impl std::future::Future<Output = Option<Media>> + Send;
     fn fetch_many(
         &self,
-        ids: Vec<AnilistID>,
+        ids: Vec<AnilistAnimeID>,
     ) -> impl std::future::Future<Output = Vec<Media>> + Send;
 }
 pub struct AnilistAPIR {
@@ -27,7 +31,7 @@ impl AnilistAPIR {
 }
 
 impl AnilistAPI for AnilistAPIR {
-    async fn fetch_one(&self, id: AnilistID) -> Option<Media> {
+    async fn fetch_one(&self, id: AnilistAnimeID) -> Option<Media> {
         let anime = self.fetch_many(vec![id]).await;
         if anime.len() == 1 {
             Some(anime.into_iter().next().expect("len is 1, so how???"))
@@ -35,7 +39,7 @@ impl AnilistAPI for AnilistAPIR {
             None
         }
     }
-    async fn fetch_many(&self, ids: Vec<AnilistID>) -> Vec<Media> {
+    async fn fetch_many(&self, ids: Vec<AnilistAnimeID>) -> Vec<Media> {
         if ids.is_empty() {
             return vec![];
         }
@@ -132,7 +136,11 @@ mod tests {
     async fn test_fetch() {
         let api = AnilistAPIR::new();
         let animes = api
-            .fetch_many(vec![AnilistID(20997), AnilistID(20651), AnilistID(14653)])
+            .fetch_many(vec![
+                AnilistAnimeID(20997),
+                AnilistAnimeID(20651),
+                AnilistAnimeID(14653),
+            ])
             .await;
         assert!(animes.len() == 3);
     }

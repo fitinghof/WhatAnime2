@@ -1,0 +1,12 @@
+[package]
+name = "anisong_scrape"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+anisong_api = { path = "../../backend/anisong_api" }
+database_api = { path = "../../backend/database_api" }
+anilist_api = { path = "../../backend/anilist_api" }
+dotenvy = "0.15.7"
+tokio = { version = "1.44.1", features = ["macros", "rt-multi-thread"] }
+chrono = "0.4.40"

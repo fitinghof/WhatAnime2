@@ -3,10 +3,11 @@ use std::vec;
 use super::AnisongAPI;
 use super::models::{Anisong, AnisongArtistID};
 use crate::error::{Error, Result};
+use crate::models::Release;
 use futures::future::join_all;
 use log::{error, warn};
-use reqwest::Client;
 use reqwest::StatusCode;
+use reqwest::{Client, Url};
 use serde::{Deserialize, Serialize};
 pub struct AnisongAPIR {
     client: Client,
@@ -207,6 +208,20 @@ impl AnisongAPI for AnisongAPIR {
             .filter(|a| a.song.name == song_title)
             .collect())
     }
+
+    async fn get_anime_season(&self, release: Release) -> Result<Vec<Anisong>> {
+        let mut url = Url::parse("https://anisongdb.com/api/filter_season").unwrap();
+        url.query_pairs_mut()
+            .append_pair("season", &release.to_string());
+        let response = self.client.get(url).send().await?;
+        match response.status() {
+            status if status.is_success() => Ok(response.json().await.unwrap()),
+            status => Err(Error::UnsuccessfulResponse {
+                status,
+                text: response.text().await.unwrap_or("No text".to_string()),
+            }),
+        }
+    }
 }
 
 impl AnisongAPIR {
@@ -261,6 +276,9 @@ pub struct ArtistIDSearchRequest {
     pub chanting: bool,
     pub character: bool,
 }
+
+#[derive(Serialize, Deserialize, Debug)]
+pub struct SeasonSearch {}
 #[derive(Serialize, Deserialize, Debug, Default, Clone)]
 pub struct SearchFilter {
     search: String,

@@ -1,3 +1,4 @@
+use anisong_api::models::AnilistAnimeID;
 use serde::{Deserialize, Serialize};
 use sqlx::{
     FromRow, Row, Type,
@@ -5,17 +6,6 @@ use sqlx::{
     error::BoxDynError,
     postgres::{PgRow, PgTypeInfo, PgValueRef},
 };
-#[derive(
-    Debug, PartialEq, Eq, PartialOrd, Ord, Hash, FromRow, Deserialize, Serialize, Clone, Copy, Type,
-)]
-#[sqlx(transparent)]
-pub struct AnilistID(pub i32);
-
-impl From<i32> for AnilistID {
-    fn from(id: i32) -> Self {
-        Self { 0: id }
-    }
-}
 
 #[derive(Deserialize, Serialize, FromRow, Debug, Clone)]
 pub struct MediaTitle {
@@ -38,10 +28,14 @@ pub struct HexColor(String);
 
 #[derive(Deserialize, Serialize, FromRow, Clone, Debug, Default)]
 pub struct CoverImage {
+    #[sqlx(rename = "anime_cover_image_color")]
     pub color: Option<HexColor>,
+    #[sqlx(rename = "anime_cover_image_medium")]
     pub medium: Option<ImageURL>,
+    #[sqlx(rename = "anime_cover_image_large")]
     pub large: Option<ImageURL>,
     #[serde(rename = "extraLarge")]
+    #[sqlx(rename = "anime_cover_image_extra_large")]
     pub extra_large: Option<ImageURL>,
 }
 
@@ -252,9 +246,9 @@ pub struct StudioConnection {
 }
 impl FromRow<'_, PgRow> for StudioConnection {
     fn from_row(row: &PgRow) -> Result<Self, sqlx::Error> {
-        let ids: Vec<i32> = row.try_get("studio_ids")?;
-        let names: Vec<String> = row.try_get("studio_names")?;
-        let urls: Vec<Option<URL>> = row.try_get("studio_urls")?;
+        let ids: Vec<i32> = row.try_get("anime_studios_id")?;
+        let names: Vec<String> = row.try_get("anime_studios_name")?;
+        let urls: Vec<Option<URL>> = row.try_get("anime_studios_url")?;
         let mut studios = Vec::with_capacity(ids.len());
         for (id, name, url) in ids
             .into_iter()
@@ -284,14 +278,17 @@ pub struct MediaTag {
 
 #[derive(Deserialize, Serialize, FromRow, Clone, Debug)]
 pub struct MediaTrailer {
+    #[sqlx(rename = "anime_trailer_id")]
     pub id: String,
+    #[sqlx(rename = "anime_trailer_site")]
     pub site: String,
+    #[sqlx(rename = "anime_trailer_thumbnail")]
     pub thumbnail: ImageURL,
 }
 
 #[derive(Deserialize, Serialize, Debug, Clone)]
 pub struct Media {
-    pub id: AnilistID,
+    pub id: AnilistAnimeID,
     // pub title: MediaTitle,
     #[serde(rename = "meanScore")]
     pub mean_score: i32,

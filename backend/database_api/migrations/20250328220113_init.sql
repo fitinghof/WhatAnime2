@@ -1,3 +1,4 @@
+-- Add migration script here
 CREATE OR REPLACE FUNCTION sort_int_array(_arr INTEGER[])
 RETURNS INTEGER[] AS $$
 SELECT array_agg(elem ORDER BY elem)

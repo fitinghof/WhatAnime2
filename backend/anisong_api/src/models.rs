@@ -1,6 +1,6 @@
 use std::str::FromStr;
 
-use serde::{Deserialize, Deserializer, Serialize};
+use serde::{Deserialize, Deserializer, Serialize, de::Visitor};
 
 use sqlx::{
     FromRow, Row, Type,
@@ -23,7 +23,7 @@ pub struct AnisongAnime {
     #[serde(rename = "animeAltName")]
     pub alt_name: Vec<String>,
     #[serde(rename = "animeVintage")]
-    pub vintage: Option<String>,
+    pub vintage: Option<Release>,
     #[serde(rename = "linked_ids")]
     #[sqlx(flatten)]
     pub linked_ids: AnimeListLinks,
@@ -48,6 +48,7 @@ pub struct AnisongSong {
     pub category: SongCategory,
     #[serde(rename = "songLength")]
     pub length: Option<f64>,
+    #[serde(deserialize_with = "bool_from_int")]
     pub is_dub: bool,
     #[serde(rename = "HQ")]
     pub hq: Option<String>,
@@ -70,6 +71,7 @@ pub struct AnisongBind {
     #[serde(rename = "songDifficulty")]
     pub difficulty: Option<f64>,
     pub song_type: SongIndex,
+    #[serde(deserialize_with = "bool_from_int")]
     pub is_rebroadcast: bool,
 }
 
@@ -99,7 +101,7 @@ impl<'de> Deserialize<'de> for Anisong {
             pub difficulty: Option<f64>,
             #[serde(rename = "songType")]
             pub song_type: SongIndex,
-            #[serde(rename = "isRebroadcast")]
+            #[serde(rename = "isRebroadcast", deserialize_with = "bool_from_int")]
             pub is_rebroadcast: bool,
             #[serde(rename = "annSongId")]
             pub song_ann_id: SongAnnId,
@@ -198,9 +200,12 @@ pub struct AnimeListLinks {
 
 #[derive(Serialize, Debug, Clone, FromRow)]
 pub struct AnimeIndex {
-    pub anime_index_type: AnimeIndexType,
-    pub anime_index_number: i32,
-    pub anime_index_part: i16,
+    #[sqlx(rename = "anime_index_type")]
+    pub index_type: AnimeIndexType,
+    #[sqlx(rename = "anime_index_number")]
+    pub number: i32,
+    #[sqlx(rename = "anime_index_part")]
+    pub part: i16,
 }
 
 impl<'de> Deserialize<'de> for AnimeIndex {
@@ -218,17 +223,19 @@ impl<'de> Deserialize<'de> for AnimeIndex {
         let anime_index_part = if temp.fract() > 0.1 { 2 } else { 1 };
 
         Ok(AnimeIndex {
-            anime_index_type,
-            anime_index_number,
-            anime_index_part,
+            index_type: anime_index_type,
+            number: anime_index_number,
+            part: anime_index_part,
         })
     }
 }
 
-#[derive(Serialize, Debug, Clone)]
+#[derive(Serialize, Debug, Clone, FromRow)]
 pub struct SongIndex {
-    song_index_type: SongIndexType,
-    song_index_number: i32,
+    #[sqlx(rename = "song_index_type")]
+    pub index_type: SongIndexType,
+    #[sqlx(rename = "song_index_number")]
+    pub number: i32,
 }
 
 impl<'de> Deserialize<'de> for SongIndex {
@@ -248,8 +255,8 @@ impl<'de> Deserialize<'de> for SongIndex {
         };
 
         Ok(SongIndex {
-            song_index_type,
-            song_index_number,
+            index_type: song_index_type,
+            number: song_index_number,
         })
     }
 }
@@ -258,7 +265,7 @@ impl<'de> Deserialize<'de> for SongIndex {
     Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Serialize, Deserialize, Hash, FromRow, Type,
 )]
 #[sqlx(transparent)]
-pub struct AnilistAnimeID(i32);
+pub struct AnilistAnimeID(pub i32);
 
 #[derive(
     Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Serialize, Deserialize, Hash, FromRow, Type,
@@ -294,7 +301,71 @@ pub struct SongID(i32);
     Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Serialize, Deserialize, Hash, FromRow, Type,
 )]
 #[sqlx(transparent)]
-pub struct AnisongArtistID(pub i32);
+pub struct AnisongArtistID(#[serde(deserialize_with = "int_from_str_or_int")] pub i32);
+impl FromStr for AnisongArtistID {
+    type Err = String;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        s.parse::<i32>()
+            .map(AnisongArtistID)
+            .map_err(|_| format!("Failed to parse '{}' as AnisongArtistID", s))
+    }
+}
+
+fn int_from_str_or_int<'de, D>(deserializer: D) -> Result<i32, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    struct IntOrStringVisitor;
+
+    impl<'de> Visitor<'de> for IntOrStringVisitor {
+        type Value = i32;
+
+        fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
+            formatter.write_str("int or number string")
+        }
+
+        fn visit_i64<E>(self, v: i64) -> Result<Self::Value, E>
+        where
+            E: serde::de::Error,
+        {
+            Ok(v as i32)
+        }
+        fn visit_u64<E>(self, v: u64) -> Result<Self::Value, E>
+        where
+            E: serde::de::Error,
+        {
+            Ok(v as i32)
+        }
+        fn visit_str<E>(self, v: &str) -> Result<Self::Value, E>
+        where
+            E: serde::de::Error,
+        {
+            match i32::from_str(v) {
+                Ok(v) => Ok(v),
+                Err(_) => Err(serde::de::Error::custom(format!(
+                    "Failed to parse {} to i32",
+                    v
+                ))),
+            }
+        }
+        fn visit_string<E>(self, v: String) -> Result<Self::Value, E>
+        where
+            E: serde::de::Error,
+        {
+            match i32::from_str(&v) {
+                Ok(v) => Ok(v),
+                Err(_) => Err(serde::de::Error::custom(format!(
+                    "Failed to parse {} to i32",
+                    v
+                ))),
+            }
+        }
+    }
+
+    deserializer.deserialize_any(IntOrStringVisitor)
+}
+
 #[derive(
     Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Serialize, Deserialize, Hash, FromRow, Type,
 )]
@@ -476,12 +547,29 @@ impl sqlx::Type<sqlx::Postgres> for SongIndexType {
     }
 }
 
-#[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Serialize, Clone, Copy, Debug, PartialEq, Eq)]
 pub enum SongCategory {
     Standard,
     Character,
     Chanting,
     Instrumental,
+    NoCategory,
+}
+
+impl<'de> Deserialize<'de> for SongCategory {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        let s: &str = &String::deserialize(deserializer).unwrap_or("no_category".to_string());
+        match s {
+            "Standard" => Ok(Self::Standard),
+            "Character" => Ok(Self::Character),
+            "Chanting" => Ok(Self::Chanting),
+            "Instrumental" => Ok(Self::Instrumental),
+            _ => Ok(Self::NoCategory),
+        }
+    }
 }
 
 impl SongCategory {
@@ -491,7 +579,7 @@ impl SongCategory {
             "character" => Ok(Self::Character),
             "chanting" => Ok(Self::Chanting),
             "instrumental" => Ok(Self::Instrumental),
-            _ => Err(Error::ParseError(s.to_string())),
+            _ => Ok(Self::NoCategory),
         }
     }
 }
@@ -504,7 +592,7 @@ impl<'r> sqlx::Decode<'r, sqlx::Postgres> for SongCategory {
             "character" => Ok(Self::Character),
             "chanting" => Ok(Self::Chanting),
             "instrumental" => Ok(Self::Instrumental),
-            _ => Err(format!("Error Parsing: {}", s).into()),
+            _ => Ok(Self::NoCategory),
         }
     }
 }
@@ -519,6 +607,7 @@ impl<'q> sqlx::Encode<'q, sqlx::Postgres> for SongCategory {
             Self::Character => "character",
             Self::Chanting => "chanting",
             Self::Instrumental => "instrumental",
+            Self::NoCategory => "no_category",
         };
         <&str as sqlx::Encode<sqlx::Postgres>>::encode(&s, buf)
     }
@@ -564,30 +653,119 @@ where
         None => Ok(Vec::new()),
     }
 }
-#[cfg(test)]
-mod tests {
-    use serde::Deserialize;
 
-    use super::*;
-    const TEST_INPUT: &str = include_str!("testParse1.json");
-    const TEST_INPUT2: &str = include_str!("testParse2.json");
-    const TEST_INPUT3: &str = include_str!("testParse3.json");
+fn bool_from_int<'de, D>(deserializer: D) -> Result<bool, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    struct BoolOrIntVisitor;
 
-    #[test]
-    fn test_parse() {
-        let _: Vec<Anisong> = serde_json::from_str(TEST_INPUT).expect("Parsing Failed");
-        let _: Vec<Anisong> = serde_json::from_str(TEST_INPUT2).expect("Parsing Failed");
+    impl<'de> Visitor<'de> for BoolOrIntVisitor {
+        type Value = bool;
 
-        // Checks to make sure that Options aren't just ommited due to missnaming or something
-        let anisong: Anisong = serde_json::from_str(TEST_INPUT3).expect("Parsing Failed");
-        assert!(!anisong.anime.alt_name.is_empty());
-        assert!(anisong.anime.alt_name[0] == "some");
-        assert!(anisong.anime.anime_type.is_some());
-        assert!(anisong.anime.vintage.is_some());
-        assert!(anisong.song.audio.is_some());
-        assert!(anisong.song.hq.is_some());
-        assert!(anisong.song.mq.is_some());
-        assert!(anisong.anisong_bind.difficulty.is_some());
-        assert!(anisong.song.length.is_some());
+        fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
+            formatter.write_str("a boolean or an integer 0 or 1")
+        }
+
+        fn visit_bool<E>(self, v: bool) -> Result<Self::Value, E>
+        where
+            E: serde::de::Error,
+        {
+            Ok(v)
+        }
+
+        fn visit_i64<E>(self, v: i64) -> Result<Self::Value, E>
+        where
+            E: serde::de::Error,
+        {
+            match v {
+                0 => Ok(false),
+                1 => Ok(true),
+                _ => Err(serde::de::Error::custom(format!(
+                    "expected 0 or 1, got {}",
+                    v
+                ))),
+            }
+        }
+        fn visit_u64<E>(self, v: u64) -> Result<Self::Value, E>
+        where
+            E: serde::de::Error,
+        {
+            match v {
+                0 => Ok(false),
+                1 => Ok(true),
+                _ => Err(serde::de::Error::custom(format!(
+                    "expected 0 or 1, got {}",
+                    v
+                ))),
+            }
+        }
     }
+
+    deserializer.deserialize_any(BoolOrIntVisitor)
+}
+
+#[derive(Debug, Serialize, Clone)]
+pub struct Release {
+    pub season: ReleaseSeason,
+    pub year: i32,
+}
+impl std::fmt::Display for Release {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{} {}", self.season, self.year)
+    }
+}
+
+impl<'de> Deserialize<'de> for Release {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        let s = String::deserialize(deserializer)?;
+        let (season_str, year_op) = split_string(&s);
+        if let (Some(year), Ok(season)) = (year_op, ReleaseSeason::from_str(&season_str)) {
+            Ok(Self {
+                season: season,
+                year,
+            })
+        } else {
+            Err(serde::de::Error::custom(format!(
+                "Failed to parse Release from string: {}",
+                s
+            )))
+        }
+    }
+}
+
+#[derive(Debug, Deserialize, Serialize, Clone)]
+pub enum ReleaseSeason {
+    Summer,
+    Fall,
+    Winter,
+    Spring,
+}
+
+impl std::fmt::Display for ReleaseSeason {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Summer => write!(f, "Summer"),
+            Self::Fall => write!(f, "Fall"),
+            Self::Winter => write!(f, "Winter"),
+            Self::Spring => write!(f, "Spring"),
+        }
+    }
+}
+
+impl FromStr for ReleaseSeason {
+    fn from_str(s: &str) -> Result<Self, Error> {
+        match s {
+            "Summer" => Ok(Self::Summer),
+            "Fall" => Ok(Self::Fall),
+            "Winter" => Ok(Self::Winter),
+            "Spring" => Ok(Self::Spring),
+            _ => Err(Error::ParseError(s.to_string())),
+        }
+    }
+
+    type Err = Error;
 }

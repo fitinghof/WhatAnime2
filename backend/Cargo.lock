@@ -51,6 +51,7 @@ dependencies = [
 name = "anilist_api"
 version = "0.1.0"
 dependencies = [
+ "anisong_api",
  "log",
  "reqwest",
  "serde",
@@ -69,6 +70,7 @@ dependencies = [
  "serde",
  "serde_json",
  "sqlx",
+ "tokio",
 ]
 
 [[package]]
@@ -342,6 +344,7 @@ version = "0.1.0"
 dependencies = [
  "anilist_api",
  "anisong_api",
+ "dotenvy",
  "serde",
  "sqlx",
  "tokio",
