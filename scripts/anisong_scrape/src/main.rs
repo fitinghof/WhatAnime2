@@ -23,62 +23,7 @@ async fn scrape_season(
     let anisongs = anisong.get_anime_season(release).await.unwrap();
     let song_amount = anisongs.len();
 
-    let anilist_ids: Vec<AnilistAnimeID> = anisongs
-        .iter()
-        .filter_map(|a| a.anime.linked_ids.anilist)
-        .collect();
-    let (anime, (bind, song)): (Vec<AnisongAnime>, (Vec<AnisongBind>, Vec<AnisongSong>)) = anisongs
-        .into_iter()
-        .map(|a| (a.anime, (a.anisong_bind, a.song)))
-        .unzip();
-
-    let (simplified_song, artists) = SimplifiedAnisongSong::decompose_all(song);
-
-    let mut song_set = HashMap::new();
-    let mut binds: Vec<Vec<AnisongBind>> = Vec::new();
-    let mut songs = Vec::new();
-    let mut index = 0;
-    simplified_song
-        .into_iter()
-        .zip(bind.into_iter())
-        .for_each(|esb| {
-            let k = (esb.0.name.clone(), esb.0.artists.clone());
-            match song_set.entry(k) {
-                std::collections::hash_map::Entry::Vacant(entry) => {
-                    entry.insert(index);
-                    index += 1;
-                    binds.push(vec![esb.1]);
-                    songs.push(esb.0);
-                }
-                std::collections::hash_map::Entry::Occupied(e) => {
-                    binds[*e.get()].push(esb.1);
-                }
-            };
-        });
-
-    let media = anilist.fetch_many(anilist_ids).await;
-    let db_animes = DBAnime::combine(anime, media);
-
-    db.add_animes(db_animes).await;
-    let bind_data = db.add_songs(songs).await;
-    assert_eq!(bind_data.len(), binds.len());
-
-    let mut binds2 = Vec::new();
-    bind_data.into_iter().zip(binds.into_iter()).for_each(|a| {
-        let (id, anisong_binds) = a;
-        anisong_binds.into_iter().for_each(|a| {
-            binds2.push(DBAnisongBind {
-                song_id: Some(id),
-                anime_ann_id: Some(a.anime_ann_id),
-                song_ann_id: a.song_ann_id,
-                difficulty: a.difficulty,
-                song_index: a.song_type,
-                is_rebroadcast: a.is_rebroadcast,
-            })
-        })
-    });
-    db.add_anisong_bind(binds2).await;
-    db.add_artists(artists).await;
+    db.add_from_anisongs(anisongs, anilist).await;
     song_amount
 }
 

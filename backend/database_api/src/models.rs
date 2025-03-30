@@ -3,20 +3,9 @@ use std::collections::HashSet;
 use anilist_api::models::*;
 use anisong_api::models::*;
 use serde::{Deserialize, Serialize};
-use sqlx::{FromRow, Row, Type, postgres::PgRow};
+use sqlx::{FromRow, Row, postgres::PgRow};
 
-#[derive(
-    Clone, PartialEq, Eq, PartialOrd, Ord, Debug, Serialize, Deserialize, Hash, FromRow, Type,
-)]
-#[sqlx(transparent)]
-pub struct SpotifySongId(String);
-
-#[derive(
-    Clone, PartialEq, Eq, PartialOrd, Ord, Debug, Serialize, Deserialize, Hash, FromRow, Type,
-)]
-#[sqlx(transparent)]
-pub struct SpotifyArtistId(pub String);
-
+use what_anime_shared::{ImageURL, ReleaseSeason, SongID, SpotifyTrackID, SpotifyUser};
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct DBAnime {
     // AnisongDB stuff
@@ -40,8 +29,15 @@ pub struct DBAnime {
     pub tags: Vec<MediaTag>,
     pub trailer: Option<MediaTrailer>,
     pub episodes: Option<i32>,
-    pub season: Option<anilist_api::models::ReleaseSeason>,
+    pub season: Option<ReleaseSeason>,
     pub season_year: Option<i32>,
+}
+
+pub struct Report {
+    pub track_id: Option<SpotifyTrackID>,
+    pub song_ann_id: Option<SongAnnId>,
+    pub message: String,
+    pub user: SpotifyUser,
 }
 
 impl From<(AnisongAnime, Option<Media>)> for DBAnime {
@@ -279,11 +275,11 @@ impl SimplifiedAnisongSong {
 #[derive(Serialize, Deserialize, Debug, Clone, FromRow)]
 pub struct DBAnisong {
     #[sqlx(flatten)]
-    anime: DBAnime,
+    pub anime: DBAnime,
     #[sqlx(flatten)]
-    song: SimplifiedAnisongSong,
+    pub song: SimplifiedAnisongSong,
     #[sqlx(flatten)]
-    bind: DBAnisongBind,
+    pub bind: DBAnisongBind,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, FromRow)]

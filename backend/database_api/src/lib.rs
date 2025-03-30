@@ -1,44 +1,40 @@
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 use std::env;
 
 use anilist_api::models::TagID;
-use anilist_api::models::URL;
-pub use anisong_api::models::AnisongArtistID;
-use anisong_api::models::AnisongSong;
-use anisong_api::models::SongID;
-use models::DBAnime;
-use models::DBAnisongBind;
-use models::SimplifiedAnisongSong;
-use models::SimplifiedArtist;
-use models::SpotifyArtistId;
-use models::SpotifySongId;
-use serde::de::value;
+use anilist_api::{AnilistAPI, AnilistAPIR};
+
+use anisong_api::models::{Anisong, AnisongAnime, AnisongArtistID, AnisongBind, AnisongSong};
+
+use models::{DBAnime, DBAnisong, DBAnisongBind, Report, SimplifiedAnisongSong, SimplifiedArtist};
+
 use sqlx::QueryBuilder;
 use sqlx::migrate;
-use sqlx::query_builder;
 use sqlx::{self, Postgres, postgres::PgPoolOptions};
+use what_anime_shared::{AnilistAnimeID, SongID, SpotifyArtistID, SpotifyTrackID, URL};
 
 pub mod models;
+mod regex;
 pub trait Database {
     fn get_anisongs_by_song_id(
         &self,
-        song_id: SpotifySongId,
-    ) -> impl std::future::Future<Output = Vec<DBAnime>> + Send;
+        song_id: SpotifyTrackID,
+    ) -> impl std::future::Future<Output = Vec<DBAnisong>> + Send;
     fn get_anisongs_by_artist_ids(
         &self,
-        artist_ids: Vec<SpotifyArtistId>,
-    ) -> impl std::future::Future<Output = Vec<DBAnime>> + Send;
+        artist_ids: Vec<SpotifyArtistID>,
+    ) -> impl std::future::Future<Output = Vec<DBAnisong>> + Send;
     fn get_artists(
         &self,
         artist_ids: Vec<AnisongArtistID>,
     ) -> impl std::future::Future<Output = Vec<SimplifiedArtist>> + Send;
     fn bind_artists(
         &self,
-        binds: Vec<(AnisongArtistID, SpotifyArtistId)>,
+        binds: Vec<(AnisongArtistID, SpotifyArtistID)>,
     ) -> impl std::future::Future<Output = u64> + Send;
     fn bind_songs(
         &self,
-        binds: Vec<(SongID, SpotifySongId)>,
+        binds: Vec<(SongID, SpotifyTrackID)>,
     ) -> impl std::future::Future<Output = u64> + Send;
     fn add_artists(
         &self,
@@ -53,6 +49,17 @@ pub trait Database {
         &self,
         bind: Vec<DBAnisongBind>,
     ) -> impl std::future::Future<Output = u64> + Send;
+    fn add_from_anisongs(
+        &self,
+        anisongs: Vec<Anisong>,
+        anilist_con: &AnilistAPIR,
+    ) -> impl std::future::Future<Output = ()> + Send;
+    fn add_report(&self, report: Report) -> impl std::future::Future<Output = ()> + Send;
+    fn full_search(
+        &self,
+        song_name: String,
+        artist_names: Vec<String>,
+    ) -> impl std::future::Future<Output = Vec<DBAnisong>> + Send;
 }
 
 pub struct DatabaseR {
@@ -83,18 +90,18 @@ impl DatabaseR {
 }
 
 impl Database for DatabaseR {
-    async fn get_anisongs_by_artist_ids(&self, artist_ids: Vec<SpotifyArtistId>) -> Vec<DBAnime> {
+    async fn get_anisongs_by_artist_ids(&self, artist_ids: Vec<SpotifyArtistID>) -> Vec<DBAnisong> {
         if artist_ids.is_empty() {
             return vec![];
         }
-        sqlx::query_as::<Postgres, DBAnime>(ANI_SONGS_FROM_SPOTIFY_ARTISTS)
+        sqlx::query_as::<Postgres, DBAnisong>(ANI_SONGS_FROM_SPOTIFY_ARTISTS)
             .bind(artist_ids)
             .fetch_all(&self.pool)
             .await
             .unwrap()
     }
-    async fn get_anisongs_by_song_id(&self, song_id: SpotifySongId) -> Vec<DBAnime> {
-        sqlx::query_as::<Postgres, DBAnime>(ANI_SONGS_FROM_SPOTIFY_SONG)
+    async fn get_anisongs_by_song_id(&self, song_id: SpotifyTrackID) -> Vec<DBAnisong> {
+        sqlx::query_as::<Postgres, DBAnisong>(ANI_SONGS_FROM_SPOTIFY_SONG)
             .bind(song_id)
             .fetch_all(&self.pool)
             .await
@@ -117,7 +124,7 @@ impl Database for DatabaseR {
         .await
         .unwrap()
     }
-    async fn bind_songs(&self, binds: Vec<(SongID, SpotifySongId)>) -> u64 {
+    async fn bind_songs(&self, binds: Vec<(SongID, SpotifyTrackID)>) -> u64 {
         if binds.is_empty() {
             return 0;
         }
@@ -134,7 +141,7 @@ impl Database for DatabaseR {
             .unwrap()
             .rows_affected()
     }
-    async fn bind_artists(&self, binds: Vec<(AnisongArtistID, SpotifyArtistId)>) -> u64 {
+    async fn bind_artists(&self, binds: Vec<(AnisongArtistID, SpotifyArtistID)>) -> u64 {
         if binds.is_empty() {
             return 0;
         }
@@ -244,7 +251,7 @@ impl Database for DatabaseR {
             .unwrap()
             .rows_affected()
     }
-    async fn add_songs(&self, mut songs: Vec<SimplifiedAnisongSong>) -> Vec<SongID> {
+    async fn add_songs(&self, songs: Vec<SimplifiedAnisongSong>) -> Vec<SongID> {
         if songs.is_empty() {
             return vec![];
         }
@@ -314,6 +321,127 @@ impl Database for DatabaseR {
             .await
             .unwrap()
             .rows_affected()
+    }
+    async fn add_from_anisongs(&self, anisongs: Vec<Anisong>, anilist_con: &AnilistAPIR) {
+        let anilist_ids: Vec<AnilistAnimeID> = anisongs
+            .iter()
+            .filter_map(|a| a.anime.linked_ids.anilist)
+            .collect();
+        let (anime, (bind, song)): (Vec<AnisongAnime>, (Vec<AnisongBind>, Vec<AnisongSong>)) =
+            anisongs
+                .into_iter()
+                .map(|a| (a.anime, (a.anisong_bind, a.song)))
+                .unzip();
+
+        let (simplified_song, artists) = SimplifiedAnisongSong::decompose_all(song);
+
+        let mut song_set = HashMap::new();
+        let mut binds: Vec<Vec<AnisongBind>> = Vec::new();
+        let mut songs = Vec::new();
+        let mut index = 0;
+        simplified_song
+            .into_iter()
+            .zip(bind.into_iter())
+            .for_each(|esb| {
+                let k = (esb.0.name.clone(), esb.0.artists.clone());
+                match song_set.entry(k) {
+                    std::collections::hash_map::Entry::Vacant(entry) => {
+                        entry.insert(index);
+                        index += 1;
+                        binds.push(vec![esb.1]);
+                        songs.push(esb.0);
+                    }
+                    std::collections::hash_map::Entry::Occupied(e) => {
+                        binds[*e.get()].push(esb.1);
+                    }
+                };
+            });
+
+        let media = anilist_con.fetch_many(anilist_ids).await;
+        let db_animes = DBAnime::combine(anime, media);
+
+        self.add_animes(db_animes).await;
+        let bind_data = self.add_songs(songs).await;
+        assert_eq!(bind_data.len(), binds.len());
+
+        let mut binds2 = Vec::new();
+        bind_data.into_iter().zip(binds.into_iter()).for_each(|a| {
+            let (id, anisong_binds) = a;
+            anisong_binds.into_iter().for_each(|a| {
+                binds2.push(DBAnisongBind {
+                    song_id: Some(id),
+                    anime_ann_id: Some(a.anime_ann_id),
+                    song_ann_id: a.song_ann_id,
+                    difficulty: a.difficulty,
+                    song_index: a.song_type,
+                    is_rebroadcast: a.is_rebroadcast,
+                })
+            })
+        });
+        self.add_anisong_bind(binds2).await;
+        self.add_artists(artists).await;
+    }
+    async fn add_report(&self, report: Report) {
+        sqlx::query::<Postgres>(
+            "INSERT INTO reports (track_id, song_id, message, user_name, user_mail, user_id)",
+        )
+        .bind(report.track_id)
+        .bind(report.song_ann_id)
+        .bind(report.message)
+        .bind(report.user.display_name)
+        .bind(report.user.email)
+        .bind(report.user.id)
+        .execute(&self.pool)
+        .await
+        .expect("This would be sad");
+    }
+    async fn full_search(&self, song_name: String, artist_names: Vec<String>) -> Vec<DBAnisong> {
+        let song_regex = regex::create_regex(&song_name);
+        let artist_regex = regex::create_artist_regex(artist_names.iter().collect());
+        let mut artist_ids = HashSet::new();
+        sqlx::query_as::<Postgres, SimplifiedArtist>(
+            r#"SELECT *
+                    FROM artists
+                    WHERE EXISTS (
+                    SELECT 1
+                    FROM unnest(names) AS name
+                    WHERE name ~ $1
+                    );"#,
+        )
+        .bind(&artist_regex)
+        .fetch_all(&self.pool)
+        .await
+        .unwrap()
+        .into_iter()
+        .for_each(|a| {
+            artist_ids.insert(a.id);
+            artist_ids.extend(a.member_ids);
+            artist_ids.extend(a.group_ids);
+        });
+        if artist_ids.is_empty() {
+            sqlx::query_as::<Postgres, SimplifiedAnisongSong>(
+                r#"SELECT * FROM songs WHERE $1 ~ name);"#,
+            )
+            .bind(&song_regex)
+            .fetch_all(&self.pool)
+            .await
+            .unwrap()
+            .into_iter()
+            .for_each(|s| {
+                artist_ids.extend(s.composers);
+                artist_ids.extend(s.arrangers);
+                artist_ids.extend(s.artists);
+            });
+        }
+        if artist_ids.is_empty() {
+            return vec![];
+        }
+        let artist_ids = Vec::from_iter(artist_ids);
+        sqlx::query_as::<Postgres, DBAnisong>(ANI_SONGS_FROM_ARTIST_IDS)
+            .bind(artist_ids)
+            .fetch_all(&self.pool)
+            .await
+            .unwrap()
     }
 }
 
@@ -512,14 +640,84 @@ WHERE
 ORDER BY s.id;
 "#;
 
+const ANI_SONGS_FROM_ARTIST_IDS: &str = r#"
+related_artist_ids AS (
+    -- Get all related artist IDs including groups and members
+    SELECT ARRAY_AGG(DISTINCT ids) AS ids
+    FROM (
+        SELECT UNNEST(ARRAY[a.id] || a.group_ids || a.member_ids) AS ids
+        FROM artists a
+        WHERE a.id IN (SELECT artist_id FROM artist_link)
+    ) subq
+)
+SELECT DISTINCT
+    s.id AS song_id,
+    s.name AS song_name,
+    s.artist_name,
+    s.composer_name,
+    s.arranger_name,
+    s.category AS song_category,
+    s.length AS song_length,
+    s.is_dub AS song_is_dub,
+    s.hq,
+    s.mq,
+    s.audio,
+    s.artists,
+    s.composers,
+    s.arrangers,
+    a.ann_id AS anime_ann_id,
+    a.eng_name AS anime_eng_name,
+    a.jpn_name AS anime_jpn_name,
+    a.alt_names AS anime_alt_names,
+    a.vintage AS anime_vintage,
+    a.myanimelist_id,
+    a.anidb_id,
+    a.anilist_id,
+    a.kitsu_id,
+    a.anime_type,
+    a.index_type AS anime_index_type,
+    a.index_number AS anime_index_number,
+    a.index_part AS anime_index_part,
+    a.mean_score AS anime_mean_score,
+    a.banner_image AS anime_banner_image,
+    a.cover_image_color AS anime_cover_image_color,
+    a.cover_image_medium AS anime_cover_image_medium,
+    a.cover_image_large AS anime_cover_image_large,
+    a.cover_image_extra_large AS anime_cover_image_extra_large,
+    a.format AS anime_format,
+    a.genres AS anime_genres,
+    a.source AS anime_source,
+    a.studios_id AS anime_studios_id,
+    a.studios_name AS anime_studios_name,
+    a.studios_url AS anime_studios_url,
+    a.tags_id AS anime_tags_id,
+    a.tags_name AS anime_tags_name,
+    a.trailer_id AS anime_trailer_id,
+    a.trailer_site AS anime_trailer_site,
+    a.trailer_thumbnail AS anime_trailer_thumbnail,
+    a.episodes AS anime_episodes,
+    a.season AS anime_season,
+    a.season_year AS anime_season_year,    
+    asl.difficulty,
+    asl.song_ann_id,
+    asl.song_index_type,
+    asl.song_index_number,
+    asl.is_rebroadcast
+FROM related_artist_ids, songs s
+INNER JOIN anime_song_links asl ON s.id = asl.song_id
+INNER JOIN animes a ON asl.anime_ann_id = a.ann_id
+WHERE 
+    s.artists && related_artist_ids.ids OR 
+    s.composers && related_artist_ids.ids
+ORDER BY s.id;
+"#;
+
 #[cfg(test)]
 mod tests {
-    use crate::{
-        Database, DatabaseR,
-        models::{SpotifyArtistId, SpotifySongId},
-    };
+    use crate::{Database, DatabaseR};
     use anisong_api::models::AnisongArtistID;
     use dotenvy;
+    use what_anime_shared::SpotifyArtistID;
 
     #[tokio::test]
     async fn test_parse() {
@@ -528,14 +726,15 @@ mod tests {
         let db = DatabaseR::new(1).await;
         let artists = vec![AnisongArtistID(1)];
         let artist_ids = vec![
-            SpotifyArtistId("2nvl0N9GwyX69RRBMEZ4OD".to_string()),
-            SpotifyArtistId("1tofuk7dTZwb6ZKsr7XRKB".to_string()),
-            SpotifyArtistId("3D73KNJRMbV45N59E8IN0F".to_string()),
+            SpotifyArtistID("2nvl0N9GwyX69RRBMEZ4OD".to_string()),
+            SpotifyArtistID("1tofuk7dTZwb6ZKsr7XRKB".to_string()),
+            SpotifyArtistID("3D73KNJRMbV45N59E8IN0F".to_string()),
         ];
         let a = db.get_anisongs_by_artist_ids(artist_ids).await;
         let b = db.get_artists(artists).await;
         assert!(!a.is_empty());
         assert!(!b.is_empty());
-        eprintln!("{:?}", a);
+        eprintln!("{:#?}", a);
+        assert!(false);
     }
 }

@@ -2,6 +2,8 @@ use std::str::FromStr;
 
 use serde::{Deserialize, Deserializer, Serialize, de::Visitor};
 
+use what_anime_shared::AnilistAnimeID;
+
 use sqlx::{
     FromRow, Row, Type,
     encode::IsNull,
@@ -265,12 +267,6 @@ impl<'de> Deserialize<'de> for SongIndex {
     Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Serialize, Deserialize, Hash, FromRow, Type,
 )]
 #[sqlx(transparent)]
-pub struct AnilistAnimeID(pub i32);
-
-#[derive(
-    Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Serialize, Deserialize, Hash, FromRow, Type,
-)]
-#[sqlx(transparent)]
 pub struct MyAnimeListAnimeID(i32);
 
 #[derive(
@@ -290,12 +286,6 @@ pub struct KitsuAnimeID(i32);
 )]
 #[sqlx(transparent)]
 pub struct AnnAnimeID(i32);
-
-#[derive(
-    Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Serialize, Deserialize, Hash, FromRow, Type,
-)]
-#[sqlx(transparent)]
-pub struct SongID(i32);
 
 #[derive(
     Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Serialize, Deserialize, Hash, FromRow, Type,

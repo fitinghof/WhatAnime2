@@ -4,6 +4,7 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
+what_anime_shared = { path = "what_anime_shared" }
 anisong_api = { path = "anisong_api" }
 database_api = { path = "database_api" }
 spotify_api = { path = "spotify_api" }
@@ -21,3 +22,6 @@ sqlx = { version = "0.8.3", features = [
     "derive",
 ] }
 tokio = { version = "1.44.1", features = ["rt-multi-thread", "macros", "net"] }
+axum = { version = "0.8.3", features = ["macros"] }
+tower-sessions = "0.14.0"
+tower-http = { version = "0.6.2", features = ["cors"] }

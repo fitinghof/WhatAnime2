@@ -1,4 +1,3 @@
-use anisong_api::models::AnilistAnimeID;
 use serde::{Deserialize, Serialize};
 use sqlx::{
     FromRow, Row, Type,
@@ -6,6 +5,7 @@ use sqlx::{
     error::BoxDynError,
     postgres::{PgRow, PgTypeInfo, PgValueRef},
 };
+use what_anime_shared::{AnilistAnimeID, ImageURL, ReleaseSeason, URL};
 
 #[derive(Deserialize, Serialize, FromRow, Debug, Clone)]
 pub struct MediaTitle {
@@ -13,12 +13,6 @@ pub struct MediaTitle {
     pub english: Option<String>,
     pub native: Option<String>,
 }
-
-#[derive(
-    Debug, PartialEq, Eq, PartialOrd, Ord, Hash, FromRow, Deserialize, Serialize, Type, Clone,
-)]
-#[sqlx(transparent)]
-pub struct ImageURL(URL);
 
 #[derive(
     Debug, PartialEq, Eq, PartialOrd, Ord, Hash, FromRow, Deserialize, Serialize, Type, Clone,
@@ -180,55 +174,6 @@ impl sqlx::Type<sqlx::Postgres> for MediaSource {
         PgTypeInfo::with_name("media_source")
     }
 }
-
-#[derive(Debug, Deserialize, Serialize, Clone)]
-#[serde(rename_all = "SCREAMING_SNAKE_CASE")]
-pub enum ReleaseSeason {
-    Winter,
-    Spring,
-    Summer,
-    Fall,
-}
-
-impl<'r> sqlx::Decode<'r, sqlx::Postgres> for ReleaseSeason {
-    fn decode(value: PgValueRef<'r>) -> Result<Self, BoxDynError> {
-        let s = <&str as sqlx::Decode<sqlx::Postgres>>::decode(value)?;
-        match s {
-            "winter" => Ok(Self::Winter),
-            "spring" => Ok(Self::Spring),
-            "summer" => Ok(Self::Summer),
-            "fall" => Ok(Self::Fall),
-            _ => Err(format!("Error Parsing: {}", s).into()),
-        }
-    }
-}
-
-impl<'q> sqlx::Encode<'q, sqlx::Postgres> for ReleaseSeason {
-    fn encode_by_ref(
-        &self,
-        buf: &mut <sqlx::Postgres as sqlx::Database>::ArgumentBuffer<'q>,
-    ) -> Result<IsNull, BoxDynError> {
-        let s = match self {
-            Self::Winter => "winter",
-            Self::Spring => "spring",
-            Self::Summer => "summer",
-            Self::Fall => "fall",
-        };
-        <&str as sqlx::Encode<sqlx::Postgres>>::encode(&s, buf)
-    }
-}
-
-impl sqlx::Type<sqlx::Postgres> for ReleaseSeason {
-    fn type_info() -> PgTypeInfo {
-        PgTypeInfo::with_name("release_season")
-    }
-}
-
-#[derive(
-    Debug, PartialEq, Eq, PartialOrd, Ord, Hash, FromRow, Deserialize, Serialize, Type, Clone,
-)]
-#[sqlx(transparent)]
-pub struct URL(String);
 
 #[derive(Deserialize, Serialize, FromRow, Clone, Debug)]
 pub struct Studio {

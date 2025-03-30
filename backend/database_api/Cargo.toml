@@ -7,6 +7,13 @@ edition = "2024"
 sqlx = { version = "0.8.3", features = ["runtime-tokio"] }
 anisong_api = { path = "../anisong_api" }
 anilist_api = { path = "../anilist_api" }
+what_anime_shared = { path = "../what_anime_shared" }
 serde = "1.0.219"
 tokio = { version = "1.44.1", features = ["macros"] }
 dotenvy = "0.15.7"
+regex = "1.11.1"
+kakasi = "0.1.0"
+fuzzywuzzy = "0.0.2"
+deunicode = "1.6.1"
+lazy_static = "1.5.0"
+itertools = "0.14.0"

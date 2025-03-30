@@ -4,7 +4,7 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
-anisong_api = { path = "../anisong_api" }
+what_anime_shared = { path = "../what_anime_shared" }
 log = "0.4.27"
 reqwest = { version = "0.12.15", features = ["json"] }
 serde = "1.0.219"

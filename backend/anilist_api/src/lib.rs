@@ -1,11 +1,10 @@
 pub mod models;
-use anisong_api::models::AnilistAnimeID;
 use log::error;
 pub use models::Media;
-use models::*;
 use reqwest::Client;
 use serde::{Deserialize, Serialize};
 use serde_json::json;
+pub use what_anime_shared::AnilistAnimeID;
 
 pub trait AnilistAPI {
     fn fetch_one(
