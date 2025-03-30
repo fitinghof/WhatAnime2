@@ -1,4 +1,4 @@
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
 use std::env;
 
 use anilist_api::models::TagID;
@@ -14,7 +14,7 @@ use sqlx::{self, Postgres, postgres::PgPoolOptions};
 use what_anime_shared::{AnilistAnimeID, SongID, SpotifyArtistID, SpotifyTrackID, URL};
 
 pub mod models;
-mod regex;
+pub mod regex;
 pub trait Database {
     fn get_anisongs_by_song_id(
         &self,
@@ -23,6 +23,10 @@ pub trait Database {
     fn get_anisongs_by_artist_ids(
         &self,
         artist_ids: Vec<SpotifyArtistID>,
+    ) -> impl std::future::Future<Output = Vec<DBAnisong>> + Send;
+    fn get_anisongs_by_ani_artist_ids(
+        &self,
+        artist_ids: Vec<AnisongArtistID>,
     ) -> impl std::future::Future<Output = Vec<DBAnisong>> + Send;
     fn get_artists(
         &self,
@@ -59,6 +63,8 @@ pub trait Database {
         &self,
         song_name: String,
         artist_names: Vec<String>,
+        whole_word_match: bool,
+        case_sensitive: bool,
     ) -> impl std::future::Future<Output = Vec<DBAnisong>> + Send;
 }
 
@@ -167,7 +173,7 @@ impl Database for DatabaseR {
             ann_id, eng_name, jpn_name, alt_names, myanimelist_id, anidb_id, anilist_id, kitsu_id, anime_type, index_type, index_number,
             index_part, mean_score, banner_image, cover_image_color, cover_image_medium, cover_image_large, cover_image_extra_large, format,
             genres, source, studios_id, studios_name, studios_url, tags_id, tags_name, trailer_id, trailer_site, trailer_thumbnail, episodes,
-            season, season_year 
+            season, season_year, vintage_realease_season, vintage_release_year
             )
             "#,
         );
@@ -216,7 +222,9 @@ impl Database for DatabaseR {
                 .push_bind(anime.trailer.as_ref().map(|t| t.thumbnail.clone()))
                 .push_bind(anime.episodes)
                 .push_bind(anime.season)
-                .push_bind(anime.season_year);
+                .push_bind(anime.season_year)
+                .push_bind(anime.vintage.as_ref().map(|v| v.season.clone()))
+                .push_bind(anime.vintage.map(|v| v.year));
         });
 
         query_builder.push(" ON CONFLICT ( ann_id ) DO NOTHING");
@@ -343,7 +351,14 @@ impl Database for DatabaseR {
             .into_iter()
             .zip(bind.into_iter())
             .for_each(|esb| {
-                let k = (esb.0.name.clone(), esb.0.artists.clone());
+                let k = (
+                    esb.0.name.clone(),
+                    esb.0
+                        .artists
+                        .iter()
+                        .map(|a| a.id)
+                        .collect::<Vec<AnisongArtistID>>(),
+                );
                 match song_set.entry(k) {
                     std::collections::hash_map::Entry::Vacant(entry) => {
                         entry.insert(index);
@@ -383,7 +398,7 @@ impl Database for DatabaseR {
     }
     async fn add_report(&self, report: Report) {
         sqlx::query::<Postgres>(
-            "INSERT INTO reports (track_id, song_id, message, user_name, user_mail, user_id)",
+            "INSERT INTO reports (track_id, ann_song_id, message, user_name, user_mail, user_id)",
         )
         .bind(report.track_id)
         .bind(report.song_ann_id)
@@ -395,94 +410,85 @@ impl Database for DatabaseR {
         .await
         .expect("This would be sad");
     }
-    async fn full_search(&self, song_name: String, artist_names: Vec<String>) -> Vec<DBAnisong> {
-        let song_regex = regex::create_regex(&song_name);
-        let artist_regex = regex::create_artist_regex(artist_names.iter().collect());
-        let mut artist_ids = HashSet::new();
-        sqlx::query_as::<Postgres, SimplifiedArtist>(
-            r#"SELECT *
-                    FROM artists
-                    WHERE EXISTS (
-                    SELECT 1
-                    FROM unnest(names) AS name
-                    WHERE name ~ $1
-                    );"#,
-        )
-        .bind(&artist_regex)
+    async fn full_search(
+        &self,
+        song_name: String,
+        artist_names: Vec<String>,
+        whole_word_match: bool,
+        case_sensitive: bool,
+    ) -> Vec<DBAnisong> {
+        let song_regex = regex::create_regex(&song_name, whole_word_match);
+        let artist_regex =
+            regex::create_artist_regex(artist_names.iter().collect(), whole_word_match);
+        let regex_type = if case_sensitive { "~" } else { "~*" };
+        sqlx::query_as::<Postgres, DBAnisong>(&format!(
+           " WITH related_artist_ids AS (
+                SELECT ARRAY_AGG(DISTINCT ids) AS ids
+                    FROM (
+                        SELECT UNNEST(ARRAY[a.id] || a.group_ids || a.member_ids) AS ids
+                        FROM artists a
+                            WHERE EXISTS (
+                                SELECT 1
+                                FROM unnest(a.names) AS name  -- Unnest the `names` array into individual rows
+                                WHERE name {0} $1  -- Regex match against each name
+                                LIMIT 1  -- Only need to find at least one match
+                            )
+                    ) subq
+                )
+                SELECT * FROM anisong_view s, related_artist_ids
+                WHERE 
+                    s.artist_ids && related_artist_ids.ids OR 
+                    s.composer_ids && related_artist_ids.ids OR
+                    s.song_name {0} $2;", regex_type
+        ))
+        .bind(artist_regex)
+        .bind(song_regex)
         .fetch_all(&self.pool)
         .await
         .unwrap()
-        .into_iter()
-        .for_each(|a| {
-            artist_ids.insert(a.id);
-            artist_ids.extend(a.member_ids);
-            artist_ids.extend(a.group_ids);
-        });
-        if artist_ids.is_empty() {
-            sqlx::query_as::<Postgres, SimplifiedAnisongSong>(
-                r#"SELECT * FROM songs WHERE $1 ~ name);"#,
-            )
-            .bind(&song_regex)
-            .fetch_all(&self.pool)
-            .await
-            .unwrap()
-            .into_iter()
-            .for_each(|s| {
-                artist_ids.extend(s.composers);
-                artist_ids.extend(s.arrangers);
-                artist_ids.extend(s.artists);
-            });
-        }
+    }
+    async fn get_anisongs_by_ani_artist_ids(
+        &self,
+        artist_ids: Vec<AnisongArtistID>,
+    ) -> Vec<DBAnisong> {
         if artist_ids.is_empty() {
             return vec![];
         }
-        let artist_ids = Vec::from_iter(artist_ids);
-        sqlx::query_as::<Postgres, DBAnisong>(ANI_SONGS_FROM_ARTIST_IDS)
-            .bind(artist_ids)
-            .fetch_all(&self.pool)
-            .await
-            .unwrap()
+        sqlx::query_as::<Postgres, DBAnisong>(
+            r#"
+            WITH song_artists AS (
+                SELECT artists, composers
+                FROM songs 
+                WHERE id = ANY($1)
+            ),
+            related_artist_ids AS (
+                SELECT ARRAY_AGG(DISTINCT ids) AS ids
+                FROM (
+                    SELECT UNNEST(ARRAY[a.id] || a.group_ids || a.member_ids) AS ids
+                    FROM artists a, song_artists sa
+                    WHERE 
+                        a.id = ANY(sa.artists || sa.composers)
+                ) subq
+            )
+            SELECT DISTINCT *
+            FROM anisong_view s, related_artist_ids
+                WHERE 
+                    s.artist_ids && related_artist_ids.ids OR 
+                    s.composer_ids && related_artist_ids.ids;
+            "#,
+        )
+        .bind(artist_ids)
+        .fetch_all(&self.pool)
+        .await
+        .unwrap()
     }
 }
-
-const SONGS_FROM_ARTISTS: &str = r#"
-SELECT DISTINCT s.* FROM songs s,
-(
-SELECT ARRAY[id] || group_ids || member_ids AS all_ids
-  FROM artists 
-  WHERE id = ANY($1)
-) as sub
-WHERE s.artists && sub.all_ids;
-"#;
-
-const ANI_SONGS_FROM_ARTISTS: &str = r#"
-WITH artist_songs AS (
-    SELECT DISTINCT s.*
-    FROM songs s, (
-        SELECT ARRAY[id] || group_ids || member_ids AS all_ids
-        FROM artists 
-        WHERE id = ANY(ARRAY[$1])  -- Parameterized array of artist IDs
-    ) as sub
-    WHERE s.artists && sub.all_ids
-)
-SELECT DISTINCT
-    a.*, 
-    s.*, 
-    asl.difficulty,
-    asl.song_index_type,
-    asl.song_index_number,
-    asl.is_rebroadcast
-FROM artist_songs s
-INNER JOIN anime_song_links asl ON s.id = asl.song_id
-INNER JOIN animes a ON asl.anime_ann_id = a.ann_id
-ORDER BY s.id;
-"#;
 
 const ANI_SONGS_FROM_SPOTIFY_SONG: &str = r#"
 WITH link AS (
     SELECT song_id 
     FROM spotify_song_links 
-    WHERE spotify_id = 'spotify_id3'
+    WHERE spotify_id = $1
 ),
 song_artists AS (
     SELECT artists, composers
@@ -498,68 +504,20 @@ related_artist_ids AS (
             a.id = ANY(sa.artists || sa.composers)
     ) subq
 )
-SELECT DISTINCT
-    s.id AS song_id,
-    s.name AS song_name,
-    s.artist_name,
-    s.composer_name,
-    s.arranger_name,
-    s.category AS song_category,
-    s.length AS song_length,
-    s.is_dub AS song_is_dub,
-    s.hq,
-    s.mq,
-    s.audio,
-    s.artists,
-    s.composers,
-    s.arrangers,
-
-    a.ann_id AS anime_ann_id,
-    a.eng_name AS anime_eng_name,
-    a.jpn_name AS anime_jpn_name,
-    a.alt_names AS anime_alt_names,
-    -- a.vintage AS anime_vintage,
-    a.myanimelist_id,
-    a.anidb_id,
-    a.anilist_id,
-    a.kitsu_id,
-    a.anime_type,
-    a.index_type AS anime_index_type,
-    a.index_number AS anime_index_number,
-    a.index_part AS anime_index_part,
-    a.mean_score AS anime_mean_score,
-    a.banner_image AS anime_banner_image,
-    a.cover_image_color AS anime_cover_image_color,
-    a.cover_image_medium AS anime_cover_image_medium,
-    a.cover_image_large AS anime_cover_image_large,
-    a.cover_image_extra_large AS anime_cover_image_extra_large,
-    a.format AS anime_format,
-    a.genres AS anime_genres,
-    a.source AS anime_source,
-    a.studios_id AS anime_studios_id,
-    a.studios_name AS anime_studios_name,
-    a.studios_url AS anime_studios_url,
-    a.tags_id AS anime_tags_id,
-    a.tags_name AS anime_tags_name,
-    a.trailer_id AS anime_trailer_id,
-    a.trailer_site AS anime_trailer_site,
-    a.trailer_thumbnail AS anime_trailer_thumbnail,
-    a.episodes AS anime_episodes,
-    a.season AS anime_season,
-    a.season_year AS anime_season_year,    
-
-    asl.difficulty,
-    asl.song_ann_id,
-    asl.song_index_type,
-    asl.song_index_number,
-    asl.is_rebroadcast
-FROM related_artist_ids, songs s
-INNER JOIN anime_song_links asl ON s.id = asl.song_id
-INNER JOIN animes a ON asl.anime_ann_id = a.ann_id
-WHERE 
-    s.artists && related_artist_ids.ids OR 
-    s.composers && related_artist_ids.ids
-ORDER BY s.id;
+SELECT *
+FROM (
+    SELECT DISTINCT 
+           s.*,
+           CASE 
+               WHEN s.song_id = (SELECT song_id FROM link) THEN 0 
+               ELSE 1 
+           END AS order_priority
+    FROM related_artist_ids, anisong_view s
+    WHERE 
+        s.artist_ids && related_artist_ids.ids OR 
+        s.composer_ids && related_artist_ids.ids
+) sub
+ORDER BY order_priority;
 "#;
 
 const ANI_SONGS_FROM_SPOTIFY_ARTISTS: &str = r#"
@@ -578,138 +536,12 @@ related_artist_ids AS (
         WHERE a.id IN (SELECT artist_id FROM artist_link)
     ) subq
 )
-SELECT DISTINCT
-    s.id AS song_id,
-    s.name AS song_name,
-    s.artist_name,
-    s.composer_name,
-    s.arranger_name,
-    s.category AS song_category,
-    s.length AS song_length,
-    s.is_dub AS song_is_dub,
-    s.hq,
-    s.mq,
-    s.audio,
-    s.artists,
-    s.composers,
-    s.arrangers,
-    a.ann_id AS anime_ann_id,
-    a.eng_name AS anime_eng_name,
-    a.jpn_name AS anime_jpn_name,
-    a.alt_names AS anime_alt_names,
-    a.vintage AS anime_vintage,
-    a.myanimelist_id,
-    a.anidb_id,
-    a.anilist_id,
-    a.kitsu_id,
-    a.anime_type,
-    a.index_type AS anime_index_type,
-    a.index_number AS anime_index_number,
-    a.index_part AS anime_index_part,
-    a.mean_score AS anime_mean_score,
-    a.banner_image AS anime_banner_image,
-    a.cover_image_color AS anime_cover_image_color,
-    a.cover_image_medium AS anime_cover_image_medium,
-    a.cover_image_large AS anime_cover_image_large,
-    a.cover_image_extra_large AS anime_cover_image_extra_large,
-    a.format AS anime_format,
-    a.genres AS anime_genres,
-    a.source AS anime_source,
-    a.studios_id AS anime_studios_id,
-    a.studios_name AS anime_studios_name,
-    a.studios_url AS anime_studios_url,
-    a.tags_id AS anime_tags_id,
-    a.tags_name AS anime_tags_name,
-    a.trailer_id AS anime_trailer_id,
-    a.trailer_site AS anime_trailer_site,
-    a.trailer_thumbnail AS anime_trailer_thumbnail,
-    a.episodes AS anime_episodes,
-    a.season AS anime_season,
-    a.season_year AS anime_season_year,    
-    asl.difficulty,
-    asl.song_ann_id,
-    asl.song_index_type,
-    asl.song_index_number,
-    asl.is_rebroadcast
-FROM related_artist_ids, songs s
-INNER JOIN anime_song_links asl ON s.id = asl.song_id
-INNER JOIN animes a ON asl.anime_ann_id = a.ann_id
+SELECT DISTINCT *
+FROM related_artist_ids, anisong_view s
 WHERE 
-    s.artists && related_artist_ids.ids OR 
-    s.composers && related_artist_ids.ids
-ORDER BY s.id;
-"#;
-
-const ANI_SONGS_FROM_ARTIST_IDS: &str = r#"
-related_artist_ids AS (
-    -- Get all related artist IDs including groups and members
-    SELECT ARRAY_AGG(DISTINCT ids) AS ids
-    FROM (
-        SELECT UNNEST(ARRAY[a.id] || a.group_ids || a.member_ids) AS ids
-        FROM artists a
-        WHERE a.id IN (SELECT artist_id FROM artist_link)
-    ) subq
-)
-SELECT DISTINCT
-    s.id AS song_id,
-    s.name AS song_name,
-    s.artist_name,
-    s.composer_name,
-    s.arranger_name,
-    s.category AS song_category,
-    s.length AS song_length,
-    s.is_dub AS song_is_dub,
-    s.hq,
-    s.mq,
-    s.audio,
-    s.artists,
-    s.composers,
-    s.arrangers,
-    a.ann_id AS anime_ann_id,
-    a.eng_name AS anime_eng_name,
-    a.jpn_name AS anime_jpn_name,
-    a.alt_names AS anime_alt_names,
-    a.vintage AS anime_vintage,
-    a.myanimelist_id,
-    a.anidb_id,
-    a.anilist_id,
-    a.kitsu_id,
-    a.anime_type,
-    a.index_type AS anime_index_type,
-    a.index_number AS anime_index_number,
-    a.index_part AS anime_index_part,
-    a.mean_score AS anime_mean_score,
-    a.banner_image AS anime_banner_image,
-    a.cover_image_color AS anime_cover_image_color,
-    a.cover_image_medium AS anime_cover_image_medium,
-    a.cover_image_large AS anime_cover_image_large,
-    a.cover_image_extra_large AS anime_cover_image_extra_large,
-    a.format AS anime_format,
-    a.genres AS anime_genres,
-    a.source AS anime_source,
-    a.studios_id AS anime_studios_id,
-    a.studios_name AS anime_studios_name,
-    a.studios_url AS anime_studios_url,
-    a.tags_id AS anime_tags_id,
-    a.tags_name AS anime_tags_name,
-    a.trailer_id AS anime_trailer_id,
-    a.trailer_site AS anime_trailer_site,
-    a.trailer_thumbnail AS anime_trailer_thumbnail,
-    a.episodes AS anime_episodes,
-    a.season AS anime_season,
-    a.season_year AS anime_season_year,    
-    asl.difficulty,
-    asl.song_ann_id,
-    asl.song_index_type,
-    asl.song_index_number,
-    asl.is_rebroadcast
-FROM related_artist_ids, songs s
-INNER JOIN anime_song_links asl ON s.id = asl.song_id
-INNER JOIN animes a ON asl.anime_ann_id = a.ann_id
-WHERE 
-    s.artists && related_artist_ids.ids OR 
-    s.composers && related_artist_ids.ids
-ORDER BY s.id;
+    s.artist_ids && related_artist_ids.ids OR 
+    s.composer_ids && related_artist_ids.ids
+ORDER BY s.song_id;
 "#;
 
 #[cfg(test)]
@@ -717,7 +549,7 @@ mod tests {
     use crate::{Database, DatabaseR};
     use anisong_api::models::AnisongArtistID;
     use dotenvy;
-    use what_anime_shared::SpotifyArtistID;
+    use what_anime_shared::{SpotifyArtistID, SpotifyTrackID};
 
     #[tokio::test]
     async fn test_parse() {
@@ -732,9 +564,31 @@ mod tests {
         ];
         let a = db.get_anisongs_by_artist_ids(artist_ids).await;
         let b = db.get_artists(artists).await;
+        let song = "idol".to_string();
+        let artists = vec!["LiSA".to_string(), "Sumire Uesaka".to_string()];
+        let c = db
+            .full_search(song.clone(), artists.clone(), false, false)
+            .await;
+        let d = db
+            .full_search(song.clone(), artists.clone(), true, false)
+            .await;
+        let e = db
+            .full_search(song.clone(), artists.clone(), false, true)
+            .await;
+        let f = db
+            .full_search(song.clone(), artists.clone(), true, true)
+            .await;
+        let g = db
+            .get_anisongs_by_song_id(SpotifyTrackID("4svcLG3SimzCbxH0RT7Omb".to_string()))
+            .await;
         assert!(!a.is_empty());
         assert!(!b.is_empty());
+        assert!(!c.is_empty());
+        assert!(!d.is_empty());
+        assert!(!e.is_empty());
+        assert!(!f.is_empty());
+        assert!(!g.is_empty());
         eprintln!("{:#?}", a);
-        assert!(false);
+        // assert!(false);
     }
 }

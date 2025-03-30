@@ -29,8 +29,7 @@ fn remove_consonants(word: &str) -> String {
 }
 
 pub fn process_similarity(japanese_text: &str, romaji_text: &str) -> f32 {
-    let japanese_regex = Regex::new(r"[\p{Hiragana}\p{Katakana}\p{Han}]").unwrap();
-    if japanese_regex.is_match(japanese_text) {
+    if kakasi::is_japanese(japanese_text) != IsJapanese::False {
         let romanized_japanese = process_possible_japanese(japanese_text);
         let normalized_japanese = normalize_text(&romanized_japanese);
         let normalized_romaji = normalize_text(romaji_text);
@@ -121,29 +120,42 @@ pub fn process_artist_name(name: &str) -> String {
     ARTIST_REGEX.replace_all(name, "$a").trim().to_string()
 }
 /// simply unwraps possible (CV:artistname) before calling create_regex
-pub fn create_artist_regex(input: Vec<&String>) -> String {
+pub fn create_artist_regex(input: Vec<&String>, whole_word_match: bool) -> String {
     input
         .iter()
         .map(|a| {
             let parsed_artist = ARTIST_REGEX.replace_all(a, "$a");
-            create_regex(&parsed_artist)
+            create_regex(&parsed_artist, whole_word_match)
         })
         .join("|")
 }
 
 /// Replaces using a precompiled regex
-pub fn create_regex(input: &str) -> String {
-    format!(
-        "^{}$",
-        REPLACEMENT_REGEX.replace_all(input, |caps: &Captures| {
-            let matched = caps.get(0).unwrap().as_str();
+pub fn create_regex(input: &str, whole_word_match: bool) -> String {
+    if whole_word_match {
+        format!(
+            "^{}$",
+            REPLACEMENT_REGEX.replace_all(input, |caps: &Captures| {
+                let matched = caps.get(0).unwrap().as_str();
 
-            REPLACEMENT_RULES.get(matched).map_or_else(
-                || matched.to_string(),
-                |&replacement| replacement.to_string(),
-            )
-        })
-    )
+                REPLACEMENT_RULES.get(matched).map_or_else(
+                    || matched.to_string(),
+                    |&replacement| replacement.to_string(),
+                )
+            })
+        )
+    } else {
+        REPLACEMENT_REGEX
+            .replace_all(input, |caps: &Captures| {
+                let matched = caps.get(0).unwrap().as_str();
+
+                REPLACEMENT_RULES.get(matched).map_or_else(
+                    || matched.to_string(),
+                    |&replacement| replacement.to_string(),
+                )
+            })
+            .to_string()
+    }
 }
 
 #[cfg(test)]

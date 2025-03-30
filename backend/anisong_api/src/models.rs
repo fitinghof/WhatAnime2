@@ -2,7 +2,7 @@ use std::str::FromStr;
 
 use serde::{Deserialize, Deserializer, Serialize, de::Visitor};
 
-use what_anime_shared::AnilistAnimeID;
+use what_anime_shared::{AnilistAnimeID, ReleaseSeason};
 
 use sqlx::{
     FromRow, Row, Type,
@@ -725,37 +725,4 @@ impl<'de> Deserialize<'de> for Release {
             )))
         }
     }
-}
-
-#[derive(Debug, Deserialize, Serialize, Clone)]
-pub enum ReleaseSeason {
-    Summer,
-    Fall,
-    Winter,
-    Spring,
-}
-
-impl std::fmt::Display for ReleaseSeason {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Self::Summer => write!(f, "Summer"),
-            Self::Fall => write!(f, "Fall"),
-            Self::Winter => write!(f, "Winter"),
-            Self::Spring => write!(f, "Spring"),
-        }
-    }
-}
-
-impl FromStr for ReleaseSeason {
-    fn from_str(s: &str) -> Result<Self, Error> {
-        match s {
-            "Summer" => Ok(Self::Summer),
-            "Fall" => Ok(Self::Fall),
-            "Winter" => Ok(Self::Winter),
-            "Spring" => Ok(Self::Spring),
-            _ => Err(Error::ParseError(s.to_string())),
-        }
-    }
-
-    type Err = Error;
 }

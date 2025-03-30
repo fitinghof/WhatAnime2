@@ -72,7 +72,7 @@ pub struct Album {
     pub images: Vec<ImageURL>,
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Clone, Debug)]
 pub struct SimplifiedArtist {
     pub id: SpotifyArtistID,
     pub name: String,

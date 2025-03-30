@@ -5,16 +5,26 @@ use axum::{
     extract::{Query, State},
     response::{IntoResponse, Redirect},
 };
-use database_api::{Database, models::Report};
+use database_api::{
+    Database,
+    models::{DBAnisong, Report},
+};
 use log::error;
 use reqwest::Url;
 use serde::{Deserialize, Serialize};
 use spotify_api::{
     SpotifyAPI,
-    models::{ClientID, ClientSecret, TokenResponse},
+    models::{ClientID, ClientSecret, CurrentlyPlaying, TokenResponse},
 };
 use tower_sessions::Session;
 use what_anime_shared::SpotifyTrackID;
+
+use crate::what_anime::utility::select_best;
+
+use super::{
+    models::{self, NewSongHit, NewSongMiss, SongInfo, SongUpdate},
+    utility::pair_artists,
+};
 
 pub struct AppState<D, S, A>
 where
@@ -56,8 +66,151 @@ where
     S: SpotifyAPI + Send + Sync + 'static,
     A: AnisongAPI + Send + Sync + 'static,
 {
-    todo!();
-    ""
+    let token = match get_token_data(session).await.unwrap() {
+        Some(t) => t,
+        None => return axum::Json(models::Update::LoginRequired),
+    };
+
+    // Add expiry check
+
+    match app_state.spotify_api.get_current(token.access_token).await {
+        Ok(p) => match p {
+            CurrentlyPlaying::Track(t) => {
+                let anisongs = app_state
+                    .database
+                    .get_anisongs_by_song_id(t.id.clone())
+                    .await;
+                if !anisongs.is_empty() {
+                    let hit_id = anisongs[0]
+                        .song
+                        .id
+                        .expect("anisong from database should always contain an id");
+                    let (hits, more_by_artists): (Vec<DBAnisong>, Vec<DBAnisong>) = anisongs
+                        .into_iter()
+                        .partition(|a| a.song.id == Some(hit_id));
+
+                    let artist_pairs =
+                        pair_artists(t.artists.clone(), hits[0].song.artists.clone());
+                    let artist_binds = artist_pairs
+                        .into_iter()
+                        .filter_map(|a| {
+                            if a.2 > 80.0 {
+                                Some((a.1.id, a.0.id))
+                            } else {
+                                None
+                            }
+                        })
+                        .collect();
+                    app_state.database.bind_artists(artist_binds).await;
+
+                    return axum::Json(models::Update::NewSong(SongUpdate {
+                        song_info: SongInfo::from_track(&t),
+                        anisongs: models::Anisongs::Hit(NewSongHit {
+                            hits,
+                            more_by_artists,
+                            certainty: 100,
+                        }),
+                    }));
+                }
+                let anisongs = app_state
+                    .database
+                    .get_anisongs_by_artist_ids(t.artists.iter().map(|a| a.id.clone()).collect())
+                    .await;
+                if !anisongs.is_empty() {
+                    let (mut song, artist_pairs) =
+                        select_best(anisongs, t.name.clone(), t.artists.clone());
+                    if song.certainty >= 80 {
+                        song.certainty = 100;
+                        let artist_binds = artist_pairs
+                            .into_iter()
+                            .filter_map(|a| {
+                                if a.2 > 80.0 {
+                                    Some((a.1.id, a.0.id))
+                                } else {
+                                    None
+                                }
+                            })
+                            .collect();
+                        app_state.database.bind_artists(artist_binds).await;
+                        let best_id = song.hits[0].song.id.expect("From database must be Some");
+                        app_state
+                            .database
+                            .bind_songs(vec![(best_id, t.id.clone())])
+                            .await;
+                    }
+                    return axum::Json(models::Update::NewSong(SongUpdate {
+                        song_info: SongInfo::from_track(&t),
+                        anisongs: models::Anisongs::Hit(song),
+                    }));
+                }
+                let anisongs = app_state
+                    .database
+                    .full_search(
+                        t.name.clone(),
+                        t.artists.iter().map(|a| a.name.clone()).collect(),
+                        true,
+                        true,
+                    )
+                    .await;
+                if !anisongs.is_empty() {
+                    let (mut song, artist_pairs) =
+                        select_best(anisongs, t.name.clone(), t.artists.clone());
+
+                    let final_search_ids = song.hits[0].song.artists.iter().map(|a| a.id).collect();
+                    let hit_song_id = song.hits[0].song.id.expect("must be some");
+                    if song.certainty >= 80 {
+                        song.certainty = 100;
+                        let artist_binds = artist_pairs
+                            .into_iter()
+                            .filter_map(|a| {
+                                if a.2 > 80.0 {
+                                    Some((a.1.id, a.0.id))
+                                } else {
+                                    None
+                                }
+                            })
+                            .collect();
+                        app_state.database.bind_artists(artist_binds).await;
+                        let best_id = song.hits[0].song.id.expect("From database must be Some");
+                        app_state
+                            .database
+                            .bind_songs(vec![(best_id, t.id.clone())])
+                            .await;
+                    }
+                    let all_songs = app_state
+                        .database
+                        .get_anisongs_by_ani_artist_ids(final_search_ids)
+                        .await;
+                    let (hits, more) = all_songs
+                        .into_iter()
+                        .partition(|a| a.song.id == Some(hit_song_id));
+
+                    song.hits = hits;
+                    song.more_by_artists = more;
+                    return axum::Json(models::Update::NewSong(SongUpdate {
+                        song_info: SongInfo::from_track(&t),
+                        anisongs: models::Anisongs::Hit(song),
+                    }));
+                }
+                let possible = app_state
+                    .database
+                    .full_search(
+                        t.name.clone(),
+                        t.artists.iter().map(|a| a.name.clone()).collect(),
+                        false,
+                        false,
+                    )
+                    .await;
+
+                return axum::Json(models::Update::NewSong(SongUpdate {
+                    song_info: SongInfo::from_track(&t),
+                    anisongs: models::Anisongs::Miss(NewSongMiss { possible }),
+                }));
+            }
+            _ => axum::Json(models::Update::NotPlaying),
+        },
+        Err(_) => axum::Json(models::Update::NotPlaying),
+    }
 }
 
 #[derive(Deserialize)]

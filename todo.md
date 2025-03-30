@@ -4,3 +4,5 @@ Other than that it is just the Update endpoint that needs to be written, should 
 It also seems that the function for syncing and combining AnilistMedia and AnisongAnime is unfunctional
 
 Also add 'reports' table to the database.
+
+Also add Anisong view to database, should be trivial to make around the bind table, and possibly make stuff a lot cleaner

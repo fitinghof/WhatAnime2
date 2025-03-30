@@ -2,13 +2,11 @@ mod error;
 mod utility;
 mod what_anime;
 
-use anilist_api::{self, AnilistAPI};
-use anisong_api::{self, AnisongAPI, AnisongAPIR, models::AnisongArtistID};
+use anisong_api::AnisongAPIR;
 
 use database_api::DatabaseR;
 use spotify_api::SpotifyAPIR;
 use what_anime::WhatAnime;
-use what_anime_shared::AnilistAnimeID;
 
 #[tokio::main]
 async fn main() {

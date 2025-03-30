@@ -1,5 +1,6 @@
-use std::str::FromStr;
-use std::sync::Arc;
+mod models;
+mod routes;
+mod utility;
 
 use anisong_api::AnisongAPI;
 use axum::Router;
@@ -11,18 +12,19 @@ use reqwest::Method;
 use reqwest::Url;
 use reqwest::header::ACCEPT;
 use reqwest::header::AUTHORIZATION;
+use routes::AppState;
 use routes::confirm_anime;
 use routes::report;
+use routes::{callback, login, update};
 use spotify_api::SpotifyAPI;
 use spotify_api::models::ClientID;
 use spotify_api::models::ClientSecret;
+use std::str::FromStr;
+use std::sync::Arc;
 use tower_http::cors::CorsLayer;
 use tower_sessions::MemoryStore;
 use tower_sessions::SessionManagerLayer;
 use tower_sessions::cookie;
-mod routes;
-use routes::AppState;
-use routes::{callback, login, update};
 
 pub struct WhatAnime<D, S, A>
 where

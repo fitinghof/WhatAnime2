@@ -13,7 +13,7 @@ pub struct DBAnime {
     pub eng_name: String,
     pub jpn_name: String,
     pub alt_name: Vec<String>,
-    // pub vintage: Option<Release>,
+    pub vintage: Option<Release>,
     pub linked_ids: AnimeListLinks,
     pub anime_type: Option<AnimeType>,
     pub anime_index: AnimeIndex,
@@ -48,6 +48,7 @@ impl From<(AnisongAnime, Option<Media>)> for DBAnime {
                 eng_name: anisong.eng_name,
                 jpn_name: anisong.jpn_name,
                 alt_name: anisong.alt_name,
+                vintage: anisong.vintage,
                 linked_ids: anisong.linked_ids,
                 anime_type: anisong.anime_type,
                 anime_index: anisong.anime_index,
@@ -69,6 +70,7 @@ impl From<(AnisongAnime, Option<Media>)> for DBAnime {
                 eng_name: anisong.eng_name,
                 jpn_name: anisong.jpn_name,
                 alt_name: anisong.alt_name,
+                vintage: anisong.vintage,
                 linked_ids: anisong.linked_ids,
                 anime_type: anisong.anime_type,
                 anime_index: anisong.anime_index,
@@ -144,11 +146,21 @@ impl FromRow<'_, PgRow> for DBAnime {
             .zip(tag_names.into_iter())
             .map(|(id, name)| MediaTag { id, name })
             .collect();
+        let vintage_release_season: Option<ReleaseSeason> =
+            row.try_get("vintage_release_season").ok();
+        let vintage_release_year: Option<i32> = row.try_get("vintage_release_season").ok();
+        let vintage =
+            if let (Some(season), Some(year)) = (vintage_release_season, vintage_release_year) {
+                Some(Release { season, year })
+            } else {
+                None
+            };
         Ok(Self {
             ann_id: row.get("anime_ann_id"),
             eng_name: row.get("anime_eng_name"),
             jpn_name: row.get("anime_jpn_name"),
             alt_name: row.get("anime_alt_names"),
+            vintage: vintage,
             linked_ids: AnimeListLinks::from_row(row)?,
             anime_type: row.get("anime_type"),
             anime_index: AnimeIndex::from_row(row)?,
@@ -168,27 +180,81 @@ impl FromRow<'_, PgRow> for DBAnime {
     }
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone, FromRow)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct SimplifiedAnisongSong {
-    #[sqlx(rename = "song_id")]
+    //#[sqlx(rename = "song_id")]
     pub id: Option<SongID>,
-    #[sqlx(rename = "song_name")]
+    //#[sqlx(rename = "song_name")]
     pub name: String,
     pub artist_name: String,
     pub composer_name: String,
     pub arranger_name: String,
-    #[sqlx(rename = "song_category")]
+    //#[sqlx(rename = "song_category")]
     pub category: SongCategory,
-    #[sqlx(rename = "song_length")]
+    //#[sqlx(rename = "song_length")]
     pub length: Option<f64>,
-    #[sqlx(rename = "song_is_dub")]
+    //#[sqlx(rename = "song_is_dub")]
     pub is_dub: bool,
     pub hq: Option<String>,
     pub mq: Option<String>,
     pub audio: Option<String>,
-    pub artists: Vec<AnisongArtistID>,
-    pub composers: Vec<AnisongArtistID>,
-    pub arrangers: Vec<AnisongArtistID>,
+    pub artists: Vec<SimplifiedArtist>,
+    pub composers: Vec<SimplifiedArtist>,
+    pub arrangers: Vec<SimplifiedArtist>,
+}
+
+impl FromRow<'_, PgRow> for SimplifiedAnisongSong {
+    fn from_row(row: &'_ PgRow) -> Result<Self, sqlx::Error> {
+        let id = row.try_get("song_id")?;
+        let name = row.try_get("song_name")?;
+        let artist_name = row.try_get("artist_name")?;
+        let composer_name = row.try_get("composer_name")?;
+        let arranger_name = row.try_get("arranger_name")?;
+        let category = row.try_get("song_category")?;
+        let length = row.try_get("song_length")?;
+        let is_dub = row.try_get("song_is_dub")?;
+        let hq = row.try_get("hq")?;
+        let mq = row.try_get("mq")?;
+        let audio = row.try_get("audio")?;
+
+        // For the JSONB columns, get them as serde_json::Value then deserialize.
+        let artists_value: serde_json::Value = row.try_get("artists")?;
+        let composers_value: serde_json::Value = row.try_get("composers")?;
+        let arrangers_value: serde_json::Value = row.try_get("arrangers")?;
+
+        let artists: Vec<SimplifiedArtist> =
+            serde_json::from_value(artists_value).map_err(|e| sqlx::Error::ColumnDecode {
+                index: "artists".into(),
+                source: Box::new(e),
+            })?;
+        let composers: Vec<SimplifiedArtist> =
+            serde_json::from_value(composers_value).map_err(|e| sqlx::Error::ColumnDecode {
+                index: "composers".into(),
+                source: Box::new(e),
+            })?;
+        let arrangers: Vec<SimplifiedArtist> =
+            serde_json::from_value(arrangers_value).map_err(|e| sqlx::Error::ColumnDecode {
+                index: "arrangers".into(),
+                source: Box::new(e),
+            })?;
+
+        Ok(SimplifiedAnisongSong {
+            id,
+            name,
+            artist_name,
+            composer_name,
+            arranger_name,
+            category,
+            length,
+            is_dub,
+            hq,
+            mq,
+            audio,
+            artists,
+            composers,
+            arrangers,
+        })
+    }
 }
 
 impl SimplifiedAnisongSong {
@@ -216,41 +282,41 @@ impl SimplifiedAnisongSong {
             arrangers: vec![],
         };
         for a in anisong.artists {
-            song.artists.push(a.id);
+            let s = SimplifiedArtist {
+                id: a.id,
+                names: a.names,
+                line_up_id: a.line_up_id,
+                group_ids: a.groups.iter().map(|a| a.id).collect(),
+                member_ids: a.members.iter().map(|a| a.id).collect(),
+            };
+            song.artists.push(s.clone());
             if artist_set.insert(a.id) {
-                let s = SimplifiedArtist {
-                    id: a.id,
-                    names: a.names,
-                    line_up_id: a.line_up_id,
-                    group_ids: a.groups.iter().map(|a| a.id).collect(),
-                    member_ids: a.members.iter().map(|a| a.id).collect(),
-                };
                 artists.push(s);
             }
         }
         for a in anisong.composers {
-            song.composers.push(a.id);
+            let s = SimplifiedArtist {
+                id: a.id,
+                names: a.names,
+                line_up_id: a.line_up_id,
+                group_ids: a.groups.iter().map(|a| a.id).collect(),
+                member_ids: a.members.iter().map(|a| a.id).collect(),
+            };
+            song.composers.push(s.clone());
             if artist_set.insert(a.id) {
-                let s = SimplifiedArtist {
-                    id: a.id,
-                    names: a.names,
-                    line_up_id: a.line_up_id,
-                    group_ids: a.groups.iter().map(|a| a.id).collect(),
-                    member_ids: a.members.iter().map(|a| a.id).collect(),
-                };
                 artists.push(s);
             }
         }
         for a in anisong.arrangers {
-            song.arrangers.push(a.id);
+            let s = SimplifiedArtist {
+                id: a.id,
+                names: a.names,
+                line_up_id: a.line_up_id,
+                group_ids: a.groups.iter().map(|a| a.id).collect(),
+                member_ids: a.members.iter().map(|a| a.id).collect(),
+            };
+            song.arrangers.push(s.clone());
             if artist_set.insert(a.id) {
-                let s = SimplifiedArtist {
-                    id: a.id,
-                    names: a.names,
-                    line_up_id: a.line_up_id,
-                    group_ids: a.groups.iter().map(|a| a.id).collect(),
-                    member_ids: a.members.iter().map(|a| a.id).collect(),
-                };
                 artists.push(s);
             }
         }
@@ -282,7 +348,8 @@ pub struct DBAnisong {
     pub bind: DBAnisongBind,
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone, FromRow)]
+#[derive(Serialize, Deserialize, Debug, Clone, FromRow, sqlx::Type)]
+#[sqlx(type_name = "jsonb")]
 pub struct SimplifiedArtist {
     pub names: Vec<String>,
     pub id: AnisongArtistID,
