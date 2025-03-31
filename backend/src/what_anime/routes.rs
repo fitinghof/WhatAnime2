@@ -75,7 +75,7 @@ where
 {
     session.load().await.unwrap();
 
-    let token = match get_token_data(session).await.unwrap() {
+    let token = match get_token_data(session.clone()).await.unwrap() {
         Some(t) => t,
         None => return axum::Json(models::Update::LoginRequired),
     };
@@ -85,6 +85,16 @@ where
     match app_state.spotify_api.get_current(token.access_token).await {
         Ok(p) => match p {
             CurrentlyPlaying::Track(t) => {
+                if params.refresh != Some(true) {
+                    let prev_played = get_prev_played(session.clone()).await.unwrap();
+                    if prev_played.as_ref() == Some(&t.id) {
+                        return axum::Json(models::Update::NoUpdates);
+                    }
+                }
+                insert_prev_played(session.clone(), t.id.clone())
+                    .await
+                    .unwrap();
+
                 let anisongs = app_state
                     .database
                     .get_anisongs_by_song_id(t.id.clone())
@@ -190,6 +200,7 @@ where
                         .database
                         .get_anisongs_by_ani_artist_ids(final_search_ids)
                         .await;
+
                     let (hits, more) = all_songs
                         .into_iter()
                         .partition(|a| a.song.id == Some(hit_song_id));
@@ -216,7 +227,12 @@ where
                     anisongs: models::Anisongs::Miss(NewSongMiss { possible }),
                 }));
             }
-            _ => axum::Json(models::Update::NotPlaying),
+            _ => {
+                insert_prev_played(session.clone(), SpotifyTrackID("".to_string()))
+                    .await
+                    .unwrap();
+                axum::Json(models::Update::NotPlaying)
+            }
         },
         Err(_) => axum::Json(models::Update::UnAuthorized),
     }
@@ -365,4 +381,15 @@ async fn get_token_data(
     session: Session,
 ) -> Result<Option<TokenResponse>, tower_sessions::session::Error> {
     session.get("token").await
+}
+async fn insert_prev_played(
+    session: Session,
+    id: SpotifyTrackID,
+) -> Result<(), tower_sessions::session::Error> {
+    session.insert("prev_played", id).await
+}
+async fn get_prev_played(
+    session: Session,
+) -> Result<Option<SpotifyTrackID>, tower_sessions::session::Error> {
+    session.get("prev_played").await
 }

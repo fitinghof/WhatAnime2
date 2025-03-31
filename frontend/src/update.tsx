@@ -99,7 +99,7 @@ const Update = () => {
                 }
             })
             .catch((err) => console.error(err));
-        if (recursive && false) {
+        if (recursive) {
             setTimeout(fetchUpdate, 5000);
         }
     };

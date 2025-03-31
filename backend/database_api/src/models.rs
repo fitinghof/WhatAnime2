@@ -52,7 +52,7 @@ impl From<(AnisongAnime, Option<Media>)> for DBAnime {
                 linked_ids: anisong.linked_ids,
                 anime_type: anisong.anime_type,
                 anime_index: anisong.anime_index,
-                mean_score: Some(ani.mean_score),
+                mean_score: ani.mean_score,
                 banner_image: ani.banner_image,
                 cover_image: ani.cover_image,
                 format: ani.format,
@@ -93,47 +93,45 @@ impl From<(AnisongAnime, Option<Media>)> for DBAnime {
 
 impl DBAnime {
     pub fn combine(mut anisongs: Vec<AnisongAnime>, mut anilists: Vec<Media>) -> Vec<DBAnime> {
-        if anisongs.is_empty() {
-            return vec![];
-        }
+        // Sort both lists by their respective anilist IDs.
         anisongs.sort_by(|a, b| a.linked_ids.anilist.cmp(&b.linked_ids.anilist));
         anilists.sort_by(|a, b| a.id.cmp(&b.id));
 
-        let mut anilists = anilists.into_iter();
-        let mut anilist_o = anilists.next();
-
-        let mut anisongs = anisongs.into_iter();
-        let mut anisong = anisongs.next().unwrap();
-
         let mut db_animes = Vec::with_capacity(anisongs.len());
-        loop {
-            if let (Some(sid), Some(anilist)) = (anisong.linked_ids.anilist, anilist_o.take()) {
-                match anilist.id {
-                    i if i == sid => {
-                        db_animes.push(DBAnime::from((anisong, Some(anilist))));
-                        match anisongs.next() {
-                            Some(a) => anisong = a,
-                            None => return db_animes,
-                        }
+
+        let mut i = 0;
+        let mut j = 0;
+        while i < anisongs.len() && j < anilists.len() {
+            match anisongs[i].linked_ids.anilist {
+                Some(anisong_id) => {
+                    let anilist_id = anilists[j].id;
+                    if anilist_id == anisong_id {
+                        db_animes.push(DBAnime::from((
+                            anisongs[i].clone(),
+                            Some(anilists[j].clone()),
+                        )));
+                        i += 1;
+                    } else if anisong_id < anilist_id {
+                        db_animes.push(DBAnime::from((anisongs[i].clone(), None)));
+                        i += 1;
+                    } else {
+                        j += 1;
                     }
-                    i if i > sid => anilist_o = anilists.next(),
-                    _ => match anisongs.next() {
-                        Some(a) => {
-                            db_animes.push(DBAnime::from((anisong, None)));
-                            anisong = a;
-                        }
-                        None => return db_animes,
-                    },
                 }
-            }
-            match anisongs.next() {
-                Some(a) => {
-                    db_animes.push(DBAnime::from((anisong, None)));
-                    anisong = a;
+                None => {
+                    db_animes.push(DBAnime::from((anisongs[i].clone(), None)));
+                    i += 1;
                 }
-                None => return db_animes,
             }
         }
+
+        // If any anisongs remain, they did not have a matching anilist.
+        while i < anisongs.len() {
+            db_animes.push(DBAnime::from((anisongs[i].clone(), None)));
+            i += 1;
+        }
+
+        db_animes
     }
 }
 

@@ -41,7 +41,7 @@ const AnimeList: React.FC<AnimeListProps> = ({ animes, list_config }) => {
     let animes_filtered = animes.filter(value => visible(value, list_config));
     return (
         <>
-            {animes_filtered.length && (
+            {animes_filtered.length != 0 && (
                 <>
                     {
                         list_config.seperator && (

@@ -1,10 +1,7 @@
 use anilist_api::{AnilistAPI, AnilistAPIR};
 use anisong_api::{
     AnisongAPI, AnisongAPIR,
-    models::{
-        AnilistAnimeID, AnisongAnime, AnisongArtistID, AnisongBind, AnisongSong, Release,
-        ReleaseSeason,
-    },
+    models::{AnisongAnime, AnisongArtistID, AnisongBind, AnisongSong, Release},
 };
 use chrono::Datelike;
 use database_api::{
@@ -13,6 +10,7 @@ use database_api::{
 };
 use dotenvy;
 use std::{collections::HashMap, io};
+use what_anime_shared::{AnilistAnimeID, ReleaseSeason};
 
 async fn scrape_season(
     release: Release,
@@ -29,6 +27,12 @@ async fn scrape_season(
 
 #[tokio::main]
 async fn main() {
+    env_logger::Builder::new()
+        .filter_level(log::LevelFilter::Info)
+        .filter_module("tracing", log::LevelFilter::Warn)
+        .target(env_logger::Target::Stdout)
+        .init();
+
     let year = chrono::Local::now().year();
     match dotenvy::from_path("../../dev.env") {
         Ok(_) => {}

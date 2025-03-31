@@ -236,7 +236,7 @@ pub struct Media {
     pub id: AnilistAnimeID,
     // pub title: MediaTitle,
     #[serde(rename = "meanScore")]
-    pub mean_score: i32,
+    pub mean_score: Option<i32>,
     #[serde(rename = "bannerImage")]
     pub banner_image: Option<ImageURL>,
     #[serde(rename = "coverImage", default)]

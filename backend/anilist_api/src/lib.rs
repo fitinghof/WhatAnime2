@@ -32,11 +32,7 @@ impl AnilistAPIR {
 impl AnilistAPI for AnilistAPIR {
     async fn fetch_one(&self, id: AnilistAnimeID) -> Option<Media> {
         let anime = self.fetch_many(vec![id]).await;
-        if anime.len() == 1 {
-            Some(anime.into_iter().next().expect("len is 1, so how???"))
-        } else {
-            None
-        }
+        anime.into_iter().next()
     }
     async fn fetch_many(&self, ids: Vec<AnilistAnimeID>) -> Vec<Media> {
         if ids.is_empty() {

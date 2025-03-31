@@ -45,7 +45,7 @@ pub enum Anisongs {
     Miss(NewSongMiss),
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Debug)]
 pub struct NewSongHit {
     pub hits: Vec<DBAnisong>,
     pub more_by_artists: Vec<DBAnisong>,

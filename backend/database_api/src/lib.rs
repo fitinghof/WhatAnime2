@@ -173,7 +173,7 @@ impl Database for DatabaseR {
             ann_id, eng_name, jpn_name, alt_names, myanimelist_id, anidb_id, anilist_id, kitsu_id, anime_type, index_type, index_number,
             index_part, mean_score, banner_image, cover_image_color, cover_image_medium, cover_image_large, cover_image_extra_large, format,
             genres, source, studios_id, studios_name, studios_url, tags_id, tags_name, trailer_id, trailer_site, trailer_thumbnail, episodes,
-            season, season_year, vintage_realease_season, vintage_release_year
+            season, season_year, vintage_release_season, vintage_release_year
             )
             "#,
         );
@@ -281,9 +281,27 @@ impl Database for DatabaseR {
                 .push_bind(song.1.hq)
                 .push_bind(song.1.mq)
                 .push_bind(song.1.audio)
-                .push_bind(song.1.artists)
-                .push_bind(song.1.composers)
-                .push_bind(song.1.arrangers);
+                .push_bind(
+                    song.1
+                        .artists
+                        .iter()
+                        .map(|a| a.id)
+                        .collect::<Vec<AnisongArtistID>>(),
+                )
+                .push_bind(
+                    song.1
+                        .composers
+                        .iter()
+                        .map(|a| a.id)
+                        .collect::<Vec<AnisongArtistID>>(),
+                )
+                .push_bind(
+                    song.1
+                        .arrangers
+                        .iter()
+                        .map(|a| a.id)
+                        .collect::<Vec<AnisongArtistID>>(),
+                );
         });
         query_builder.push(
             r#") INSERT INTO songs (name, artist_name, composer_name, arranger_name, category, length, is_dub, hq, mq, audio, artists, composers, arrangers)
@@ -456,25 +474,21 @@ impl Database for DatabaseR {
         }
         sqlx::query_as::<Postgres, DBAnisong>(
             r#"
-            WITH song_artists AS (
-                SELECT artists, composers
-                FROM songs 
-                WHERE id = ANY($1)
-            ),
-            related_artist_ids AS (
+            WITH related_artist_ids AS (
+                -- Get all related artist IDs including groups and members
                 SELECT ARRAY_AGG(DISTINCT ids) AS ids
                 FROM (
                     SELECT UNNEST(ARRAY[a.id] || a.group_ids || a.member_ids) AS ids
-                    FROM artists a, song_artists sa
-                    WHERE 
-                        a.id = ANY(sa.artists || sa.composers)
+                    FROM artists a
+                    WHERE a.id = ANY($1)
                 ) subq
             )
             SELECT DISTINCT *
-            FROM anisong_view s, related_artist_ids
-                WHERE 
-                    s.artist_ids && related_artist_ids.ids OR 
-                    s.composer_ids && related_artist_ids.ids;
+            FROM related_artist_ids, anisong_view s
+            WHERE 
+                s.artist_ids && related_artist_ids.ids OR 
+                s.composer_ids && related_artist_ids.ids
+            ORDER BY s.song_id;
             "#,
         )
         .bind(artist_ids)

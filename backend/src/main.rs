@@ -11,6 +11,12 @@ use what_anime::WhatAnime;
 
 #[tokio::main]
 async fn main() {
+    env_logger::Builder::new()
+        .filter_level(log::LevelFilter::Info)
+        .filter_module("tracing", log::LevelFilter::Warn)
+        .target(env_logger::Target::Stdout)
+        .init();
+
     dotenvy::from_path("../dev.env").expect("Environment load must succed");
     let database = DatabaseR::new(4).await;
     let anisong = AnisongAPIR::new();
