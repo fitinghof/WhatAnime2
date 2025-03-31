@@ -11,7 +11,7 @@ pub enum CurrentlyPlaying {
 pub struct State(pub String);
 impl std::fmt::Display for State {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.write_str(&self.0)
+        write!(f, "{}", &self.0)
     }
 }
 
@@ -19,7 +19,7 @@ impl std::fmt::Display for State {
 pub struct SpotifyToken(String);
 impl std::fmt::Display for SpotifyToken {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.write_str(&self.0)
+        write!(f, "{}", &self.0)
     }
 }
 
@@ -27,7 +27,7 @@ impl std::fmt::Display for SpotifyToken {
 pub struct ClientID(pub String);
 impl std::fmt::Display for ClientID {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.write_str(&self.0)
+        write!(f, "{}", &self.0)
     }
 }
 
@@ -35,7 +35,7 @@ impl std::fmt::Display for ClientID {
 pub struct ClientSecret(pub String);
 impl std::fmt::Display for ClientSecret {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.write_str(&self.0)
+        write!(f, "{}", &self.0)
     }
 }
 
@@ -66,10 +66,31 @@ pub struct TrackObject {
     pub name: String,
 }
 
-#[derive(Deserialize)]
 pub struct Album {
     pub name: String,
     pub images: Vec<ImageURL>,
+}
+
+impl<'de> Deserialize<'de> for Album {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        #[derive(Deserialize)]
+        struct Image {
+            url: ImageURL,
+        }
+        #[derive(Deserialize)]
+        pub struct Helper {
+            pub name: String,
+            pub images: Vec<Image>,
+        }
+        let h = Helper::deserialize(deserializer)?;
+        Ok(Self {
+            name: h.name,
+            images: h.images.into_iter().map(|a| a.url).collect(),
+        })
+    }
 }
 
 #[derive(Deserialize, Clone, Debug)]

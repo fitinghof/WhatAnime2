@@ -55,7 +55,7 @@ where
                 _anisong_api: anisong_api,
                 client_id,
                 client_secret,
-                redirect_uri: Url::from_str("http://whatanime.ddns.net:5173/")
+                redirect_uri: Url::from_str("http://whatanime.ddns.net:8000/callback")
                     .expect("redirect must be valid str"),
             }),
         }

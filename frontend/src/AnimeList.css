@@ -1,0 +1,30 @@
+.separator {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    margin: 10px 0;
+    font-size: 16px;
+    font-weight: bold;
+}
+
+.separator::before,
+.separator::after {
+    content: "";
+    flex-grow: 1;
+    height: 2px;
+    background-color: #555;
+    margin: 0 10px;
+}
+
+/* Anime List */
+.anime-list {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 15px;
+    justify-content: center;
+    background: #333333;
+    padding: 20px;
+    /*No width cause then it becomes unaligend???*/
+}

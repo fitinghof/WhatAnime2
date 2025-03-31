@@ -230,6 +230,7 @@ dependencies = [
  "anisong_api",
  "axum",
  "database_api",
+ "dotenvy",
  "env_logger",
  "futures",
  "fuzzywuzzy",

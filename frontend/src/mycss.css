@@ -1,0 +1,108 @@
+/* General Styles */
+body {
+    /* Set background color */
+    background-color: #333333;
+    font-family: Arial, sans-serif;
+}
+
+h1 {
+    color: #ff6347;
+    /* Set text color for h1 */
+}
+
+h3 {
+    color: #4682b4;
+    /* Set text color for h3 */
+}
+
+a {
+    color: #4682b4;
+}
+
+.settings-header,
+.setting-header,
+.song-title,
+.separator,
+.bind-anime-button,
+.toggle-extra-info-button,
+.anime-score,
+.report-button,
+.report-header,
+.anime-title {
+    color: #ec9b22;
+}
+
+.artist-name,
+.anime-info {
+    color: #e4f3ff;
+}
+
+.favicon {
+    border-radius: 50%;
+    /* Makes it round */
+    width: 35px;
+    /* Adjust as needed */
+    height: 35px;
+}
+
+.square-container {
+    margin-left: auto;
+    display: grid;
+    justify-content: center;
+    align-items: center;
+    grid-template-columns: repeat(2, 1fr);
+    /* Create a 2x2 grid */
+    grid-template-rows: repeat(2, 1fr);
+    /* Create a 2x2 grid */
+    width: 70px;
+    min-width: 70px;
+    /* Set the width of the square */
+    height: 70px;
+    min-height: 70px;
+    /* Set the height of the square */
+    gap: 2px;
+    /* Add some space between the buttons */
+    background-color: #252525;
+    /* Background color of the container */
+    padding: 0px;
+    /* Padding inside the container */
+    border-radius: 8px;
+    /* Rounded corners */
+}
+
+/* Square Buttons */
+.square-button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: #333333;
+    color: #f0f0f0;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 14px;
+    width: 100%;
+    min-width: 100%;
+    /* Set the width of the square */
+    height: 100%;
+    min-height: 100%;
+}
+
+.square-button-on {
+    background-color: #1b4d14;
+}
+
+.square-button-off {
+    background-color: #6e1b1b;
+}
+
+.square-button:hover {
+    filter: brightness(65%);
+}
+
+/* Remove hover effect for touch screen */
+@media (pointer: coarse) {
+    .square-button:hover {
+        filter: none;
+    }
+}

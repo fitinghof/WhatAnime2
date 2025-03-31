@@ -57,15 +57,24 @@ where
 
     Redirect::to(url.as_str())
 }
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct UpdateParams {
+    refresh: Option<bool>,
+}
+
 pub async fn update<D, S, A>(
     State(app_state): State<Arc<AppState<D, S, A>>>,
     session: Session,
+    Query(params): Query<UpdateParams>,
 ) -> impl IntoResponse
 where
     D: Database + Send + Sync + 'static,
     S: SpotifyAPI + Send + Sync + 'static,
     A: AnisongAPI + Send + Sync + 'static,
 {
+    session.load().await.unwrap();
+
     let token = match get_token_data(session).await.unwrap() {
         Some(t) => t,
         None => return axum::Json(models::Update::LoginRequired),
@@ -209,7 +218,7 @@ where
             }
             _ => axum::Json(models::Update::NotPlaying),
         },
-        Err(_) => axum::Json(models::Update::NotPlaying),
+        Err(_) => axum::Json(models::Update::UnAuthorized),
     }
 }
 
@@ -229,6 +238,8 @@ where
     S: SpotifyAPI + Send + Sync + 'static,
     A: AnisongAPI + Send + Sync + 'static,
 {
+    session.load().await.unwrap();
+
     let session_state = match remove_state(session.clone()).await {
         Ok(v) => v,
         Err(e) => {
@@ -348,7 +359,7 @@ async fn insert_token_data(
     session: Session,
     token_data: TokenResponse,
 ) -> Result<(), tower_sessions::session::Error> {
-    session.insert("state", token_data).await
+    session.insert("token", token_data).await
 }
 async fn get_token_data(
     session: Session,

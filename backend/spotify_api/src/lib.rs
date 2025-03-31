@@ -79,23 +79,26 @@ impl<const ALLOWED_FETCH_PER_SEC: u64> SpotifyAPI for SpotifyAPIR<ALLOWED_FETCH_
     async fn get_current(&self, token: SpotifyToken) -> Result<CurrentlyPlaying, models::Error> {
         //self.ticker.tick().await;
         let mut headers = HeaderMap::new();
-        headers
-            .insert(
-                "Authorization",
-                HeaderValue::from_str(&format!("Bearer {}", token))
-                    .expect("Failed to make headervalue from token"),
-            )
-            .expect("Failed to insert header");
+        headers.insert(
+            "Authorization",
+            HeaderValue::from_str(&format!("Bearer {}", token)).unwrap(),
+        );
 
         let url = Url::from_str("https://api.spotify.com/v1/me/player/currently-playing")
             .expect("Invalid URL");
 
-        let response = self.client.get(url.clone()).headers(headers).send().await?;
+        let response = self
+            .client
+            .get(url.clone())
+            .headers(headers)
+            .send()
+            .await
+            .unwrap();
 
         match response.status() {
             StatusCode::NO_CONTENT => Ok(CurrentlyPlaying::Nothing),
             StatusCode::OK => {
-                let t: Response = response.json().await?;
+                let t: Response = response.json().await.unwrap();
                 match t.item {
                     Item::TrackObject(t) => Ok(CurrentlyPlaying::Track(t)),
                     Item::EpisodeObject => Ok(CurrentlyPlaying::Episode),

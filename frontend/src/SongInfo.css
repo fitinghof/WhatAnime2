@@ -1,0 +1,88 @@
+.now-playing-container {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    background: #333333;
+    padding: 20px;
+    /*No width cause then it becomes unaligend???*/
+}
+
+.now-playing {
+    flex-grow: 1;
+    display: flex;
+    align-items: center;
+    background-color: #252525;
+    color: white;
+    padding: 20px;
+    border-radius: 12px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+    width: 90%;
+    gap: 12px
+}
+
+.album-art {
+    width: 70px;
+    height: 70px;
+    border-radius: 8px;
+    object-fit: cover;
+}
+
+.song-info {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 0px;
+    /* Ensure no gap between title and artist names */
+}
+
+.song-title {
+    font-size: 16px;
+    font-weight: bold;
+    margin: 0;
+    /* Remove default margin */
+}
+
+.artist-name {
+    font-size: 14px;
+    margin: 0;
+    /* Remove default margin */
+}
+
+.settings-button {
+    background-color: #195e0b00;
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
+    width: 70px;
+    height: 70px;
+    margin-top: auto;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    order: 2;
+    background-image: url('settings.svg');
+    background-size: 130%;
+    background-position: center;
+    background-repeat: no-repeat;
+}
+
+.anime-score {
+    align-items: center;
+    justify-content: center;
+    display: flex;
+    width: 70px;
+    height: 70px;
+    min-width: 70px;
+    min-height: 70px;
+    background-image: url('star.svg');
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+}
+
+.settings-button:hover {
+    background-color: #ffffff1a;
+}
