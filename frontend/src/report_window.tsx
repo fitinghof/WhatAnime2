@@ -9,13 +9,13 @@ interface ReportInfo {
 }
 
 const ReportButton: React.FC<ReportInfo> = ({ ann_song_id, spotify_song_id, hide }) => {
-    const [reason, setReason] = useState(""); // Stores the report reason
+    const [message, setReason] = useState(""); // Stores the report reason
 
     const handleSubmit = () => {
         const params = {
             spotify_id: spotify_song_id,
             ann_song_id: ann_song_id,
-            reason: reason,
+            message: message,
         };
         fetch("/api/report", {
             method: "POST",
@@ -28,7 +28,7 @@ const ReportButton: React.FC<ReportInfo> = ({ ann_song_id, spotify_song_id, hide
             .then(data => {
                 console.log(data);
             })
-        console.log("Report Submitted:", reason, ann_song_id, spotify_song_id);
+        console.log("Report Submitted:", message, ann_song_id, spotify_song_id);
         hide(); // Close the popup after submitting
         setReason(""); // Reset the input field
     };
@@ -39,7 +39,7 @@ const ReportButton: React.FC<ReportInfo> = ({ ann_song_id, spotify_song_id, hide
                 <div className="popup-container">
                     <h2 className="report-header">Report Issue</h2>
                     <textarea
-                        value={reason}
+                        value={message}
                         onChange={(e) => setReason(e.target.value)}
                         placeholder="What is the reason for the report?"
                         className="report-textarea"

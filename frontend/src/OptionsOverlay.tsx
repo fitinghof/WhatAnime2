@@ -21,7 +21,6 @@ const OptionsOverlay: React.FC<SettingsProp> = ({ settings, hide, onSettingsChan
         <div className="settings-window-overlay">
             <div className="settings-popup-container">
                 <div className="header">
-                    <div className="dummy"></div>
                     <button className="close-button" onClick={hide}>X</button>
                     <h2 className="settings-header">Settings</h2>
                 </div>
@@ -36,6 +35,16 @@ const OptionsOverlay: React.FC<SettingsProp> = ({ settings, hide, onSettingsChan
                     <button className={`setting-buttons ${settings.showEndings ? "on-color" : "off-color"}`}
                         onClick={() => onSettingsChange({ ...settings, showEndings: !settings.showEndings })}>
                         Endings</button>
+                </div>
+
+                <div className="setting-header">Anime Title Language</div>
+                <div className="setting-buttons-container">
+                    <button className={`setting-buttons ${settings.language === "eng" ? "on-color" : "off-color"}`}
+                        onClick={() => onSettingsChange({ ...settings, language: "eng" })}>
+                        English</button>
+                    <button className={`setting-buttons ${settings.language === "jpn" ? "on-color" : "off-color"}`}
+                        onClick={() => onSettingsChange({ ...settings, language: "jpn" })}>
+                        Japanese</button>
                 </div>
             </div>
         </div>

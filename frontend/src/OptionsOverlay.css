@@ -17,10 +17,15 @@
     width: 24rem;
     height: 50%;
     width: 80%;
-    min-height: 200px;
+    /* min-height: 200px; */
     justify-content: flex-start;
     display: flex;
     flex-direction: column;
+    max-height: 90%;
+    /* Limit height to viewport */
+    overflow-y: auto;
+    overflow-x: hidden;
+    scrollbar-width: none;
 }
 
 .header {
@@ -50,6 +55,8 @@
 }
 
 .close-button {
+    position: absolute;
+    right: 10%;
     order: 2;
     background-color: #a52222;
     border-radius: 8%;
@@ -59,6 +66,7 @@
 }
 
 .setting-header {
+    margin-top: 8px;
     order: 1;
     font-size: 16px;
     font-weight: bold;

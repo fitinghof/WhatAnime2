@@ -1,8 +1,9 @@
 import React, { useEffect, useState } from "react";
 import './AnimeEntry.css'
+import { Language } from "./OptionsOverlay";
 
 function parseAnimeIndex(animeIndex: AnimeIndex): string {
-  switch (animeIndex.indexType) {
+  switch (animeIndex.index_type) {
     case "Season":
       return `Season ${animeIndex.number || 1}`;
     case "Movie":
@@ -27,11 +28,11 @@ function parseTrackIndex(track: AnimeTrackIndex): string {
 
   switch (track.index_type) {
     case "Opening":
-      return `Opening ${track.index || ""}`;
+      return `Opening ${track.index || "1"}`;
     case "Insert":
-      return `Insert Song`;
+      return `Insert Song ${track.index || ""}`;
     case "Ending":
-      return `Ending ${track.index || ""}`;
+      return `Ending ${track.index || "1"}`;
     default:
       return "";
   }
@@ -45,6 +46,7 @@ interface AnimeEntryProps {
 export interface AnimeEntryConfig {
   show_confirm_button: boolean,
   spotify_song_id: string,
+  language: Language,
   after_anime_bind: () => void;
   open_report_window: (anisong_ann_id: number) => void,
 }
@@ -110,7 +112,7 @@ const AnimeEntry: React.FC<AnimeEntryProps> = ({ anime, config }) => {
       headers: {
         "Content-Type": "application/json",
       },
-      body: JSON.stringify(params)
+      body: JSON.stringify(params),
     })
       .then(response => response.text())
       .then(data => {
@@ -121,6 +123,9 @@ const AnimeEntry: React.FC<AnimeEntryProps> = ({ anime, config }) => {
 
   let animeSongNumber = parseTrackIndex(anime.bind.song_index);
   let animeIndex = parseAnimeIndex(anime.anime.anime_index);
+  let source = formatSource(anime.anime.source);
+  let release_season = formatReleaseSeason(anime.anime.vintage?.season);
+  let title = config.language === "eng" ? anime.anime.eng_name : anime.anime.jpn_name;
   return (
     <div className="anime-item" style={{ backgroundImage: `linear-gradient(rgba(0, 0, 0, 0.5), rgba(0, 0, 0, 0.5)), url(${anime.anime.banner_image ?? "/amq_icon_green.svg"})` }}>
       <div className="left-info-container">
@@ -145,28 +150,55 @@ const AnimeEntry: React.FC<AnimeEntryProps> = ({ anime, config }) => {
       </div>
       <div className="anime-info">
         <div className="anime-title">
-          {anime.anime.eng_name || "Unknown Anime"}
+          {title || "Unknown Anime"}
         </div>
-
         {showMoreInfo &&
           <div className="extra-info">
-            <div className="anime-song-title">
+
+            {/* Song name */}
+            <div className="anime-info-text">
               {`Song Title: ${anime.song.name}`}
             </div>
 
-            <div className="anime-artists-names">
+            {/* Artists */}
+            <div className="anime-info-text">
               {`Artists: ${anime.song.artists.map(a => a.names[0]).join(", ")}`}
             </div>
 
-            <div className="anime-season">
-              {`${animeIndex}`}
+            {/* Composers */}
+            <div className="anime-info-text">
+              {`Composers: ${anime.song.composers.map(a => a.names[0]).join(", ")}`}
             </div>
 
-            <div className="anime-opening">
+            {/* Season x */}
+            <div className="anime-info-text">
+              {`${animeIndex}`}
+            </div>
+            {/* Episodes */}
+            {anime.anime.episodes && (
+              <div className="anime-info-text">
+                {`Episodes: ${anime.anime.episodes}`}
+              </div>
+            )}
+            {/* Insert x */}
+            <div className="anime-info-text">
               {animeSongNumber}
             </div>
 
-            <div className="anime-type">
+            {anime.anime.vintage && (
+              <div className="anime-info-text">
+                {`Release: ${release_season} ${anime.anime.vintage.year}`}
+              </div>
+            )}
+
+            {source && (
+              <div className="anime-info-text">
+                {`Source: ${source}`}
+              </div>
+            )}
+
+
+            <div className="anime-info-text">
               {`Type: ${anime.anime.anime_type || "Unknown"}`}
             </div>
             {linked_ids(anime.anime.linked_ids)}
@@ -230,7 +262,7 @@ export interface DBAnime {
 }
 
 export interface AnimeIndex {
-  indexType: AnimeIndexType; // Type of the anime index (e.g., Season, Movie, OVA)
+  index_type: AnimeIndexType; // Type of the anime index (e.g., Season, Movie, OVA)
   number: number; // Index number (e.g., season number, movie number)
   part: number; // Part of the index (e.g., part 1, part 2)
 }
@@ -328,10 +360,31 @@ export type SongIndexType = "Opening" | "Insert" | "Ending"
 
 export type AnimeType = "TV" | "Movie" | "OVA" | "ONA" | "Special";
 
-export type ReleaseSeason = "Spring" | "Summer" | "Fall" | "Winter";
+export type ReleaseSeason = "SPRING" | "SUMMER" | "FALL" | "WINTER";
 
 export type MediaFormat = "TV" | "TV_SHORT" | "MOVIE" | "OVA" | "ONA" | "SPECIAL";
 
 export type MediaSource = "MANGA" | "LIGHT_NOVEL" | "ORIGINAL" | "GAME" | "OTHER";
 
 export type SongCategory = "Opening" | "Ending" | "Insert";
+
+function formatReleaseSeason(release_season: ReleaseSeason | undefined): string | null {
+  switch (release_season) {
+    case "SPRING": return "Spring";
+    case "SUMMER": return "Summer";
+    case "FALL": return "Fall";
+    case "WINTER": return "Winter";
+  }
+  return null;
+}
+
+function formatSource(source: MediaSource | undefined): string | null {
+  switch (source) {
+    case "GAME": return "Game";
+    case "LIGHT_NOVEL": return "Light Novel";
+    case "MANGA": return "Manga";
+    case "ORIGINAL": return "Original";
+    case "OTHER": return null;
+  }
+  return null
+}

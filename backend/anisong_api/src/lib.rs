@@ -63,7 +63,7 @@ mod tests {
             .unwrap();
 
         let release = Release {
-            season: models::ReleaseSeason::Fall,
+            season: what_anime_shared::ReleaseSeason::Fall,
             year: 2000,
         };
 

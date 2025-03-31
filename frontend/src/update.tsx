@@ -40,6 +40,7 @@ const Update = () => {
         show_confirm_button: false,
         seperator: null,
         spotify_song_id: "",
+        language: "eng",
         after_anime_bind: () => fetchUpdate(true, false),
         open_report_window: (song_ann_id: number) => setReportOverlay({ show: true, song_ann_id: song_ann_id }),
     })
@@ -50,7 +51,8 @@ const Update = () => {
             ...p,
             openings: settings.showOpenings,
             inserts: settings.showInserts,
-            endings: settings.showEndings
+            endings: settings.showEndings,
+            language: settings.language,
         }))
     }
 
@@ -84,7 +86,6 @@ const Update = () => {
                         case "not_playing":
                     }
                 } else {
-                    console.log(data);
                     setInfo(data.new_song);
                     const anisongs = data.new_song.anisongs;
                     let show_button = true;

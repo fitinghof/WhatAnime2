@@ -1,6 +1,7 @@
 import React from "react";
 import AnimeEntry, { AnimeInfo, AnimeEntryConfig } from "./AnimeEntry";
 import "./AnimeList.css";
+import { Language } from "./OptionsOverlay";
 
 
 interface AnimeListProps {
@@ -12,6 +13,7 @@ export interface ListConfig {
     openings: boolean,
     inserts: boolean,
     endings: boolean,
+    language: Language,
     show_confirm_button: boolean,
     seperator: string | null,
     spotify_song_id: string,
@@ -34,6 +36,7 @@ const AnimeList: React.FC<AnimeListProps> = ({ animes, list_config }) => {
     {
         show_confirm_button: list_config.show_confirm_button,
         spotify_song_id: list_config.spotify_song_id,
+        language: list_config.language,
         after_anime_bind: list_config.after_anime_bind,
         open_report_window: list_config.open_report_window
     };

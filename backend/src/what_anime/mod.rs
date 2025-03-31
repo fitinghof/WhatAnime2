@@ -35,6 +35,9 @@ where
     app_state: Arc<AppState<D, S, A>>,
 }
 
+const FRONTEND_PORT: u16 = 5500;
+const BACKEND_PORT: u16 = 8080;
+
 impl<D, S, A> WhatAnime<D, S, A>
 where
     D: Database + Send + Sync + 'static,
@@ -55,8 +58,11 @@ where
                 _anisong_api: anisong_api,
                 client_id,
                 client_secret,
-                redirect_uri: Url::from_str("http://whatanime.ddns.net:8000/callback")
-                    .expect("redirect must be valid str"),
+                redirect_uri: Url::from_str(&format!(
+                    "http://whatanime.ddns.net:{}/callback",
+                    BACKEND_PORT
+                ))
+                .expect("redirect must be valid str"),
             }),
         }
     }
@@ -72,8 +78,10 @@ where
         // migrate_database(&shared_state.database).await;
 
         let allowed_origins = [
-            "http://localhost:5173".parse::<HeaderValue>().unwrap(),
-            "http://whatanime.ddns.net:5173"
+            format!("http://localhost:{}", FRONTEND_PORT)
+                .parse::<HeaderValue>()
+                .unwrap(),
+            format!("http://whatanime.ddns.net:{}", FRONTEND_PORT)
                 .parse::<HeaderValue>()
                 .unwrap(),
         ];
@@ -94,7 +102,9 @@ where
             )
             .with_state(self.app_state.clone());
 
-        let listener = tokio::net::TcpListener::bind("0.0.0.0:8000").await.unwrap();
+        let listener = tokio::net::TcpListener::bind(format!("0.0.0.0:{}", BACKEND_PORT))
+            .await
+            .unwrap();
         axum::serve(listener, app).await.unwrap()
     }
 }

@@ -1,6 +1,7 @@
 use std::collections::HashSet;
 
 use anilist_api::models::*;
+pub use anisong_api::models::AnisongArtistID;
 use anisong_api::models::*;
 use serde::{Deserialize, Serialize};
 use sqlx::{FromRow, Row, postgres::PgRow};
@@ -145,8 +146,8 @@ impl FromRow<'_, PgRow> for DBAnime {
             .map(|(id, name)| MediaTag { id, name })
             .collect();
         let vintage_release_season: Option<ReleaseSeason> =
-            row.try_get("vintage_release_season").ok();
-        let vintage_release_year: Option<i32> = row.try_get("vintage_release_season").ok();
+            row.try_get("anime_vintage_season").ok();
+        let vintage_release_year: Option<i32> = row.try_get("anime_vintage_year").ok();
         let vintage =
             if let (Some(season), Some(year)) = (vintage_release_season, vintage_release_year) {
                 Some(Release { season, year })

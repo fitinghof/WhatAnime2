@@ -415,8 +415,9 @@ impl Database for DatabaseR {
         self.add_artists(artists).await;
     }
     async fn add_report(&self, report: Report) {
+        println!("User: {:?}\nSpotify: {:?}", report.user.id, report.track_id);
         sqlx::query::<Postgres>(
-            "INSERT INTO reports (track_id, ann_song_id, message, user_name, user_mail, user_id)",
+            "INSERT INTO reports (track_id, ann_song_id, message, user_name, user_mail, user_id) VALUES ($1, $2, $3, $4, $5, $6)",
         )
         .bind(report.track_id)
         .bind(report.song_ann_id)

@@ -22,6 +22,7 @@ use what_anime_shared::SpotifyTrackID;
 use crate::what_anime::utility::select_best;
 
 use super::{
+    FRONTEND_PORT,
     models::{self, NewSongHit, NewSongMiss, SongInfo, SongUpdate},
     utility::pair_artists,
 };
@@ -296,7 +297,10 @@ where
 
     session.save().await.unwrap();
 
-    return Ok(Redirect::to("http://whatanime.ddns.net:5173/"));
+    return Ok(Redirect::to(&format!(
+        "http://whatanime.ddns.net:{}/",
+        FRONTEND_PORT
+    )));
 }
 
 #[derive(Deserialize)]
@@ -306,8 +310,8 @@ pub struct ConfirmationParams {
 }
 
 pub async fn confirm_anime<D, S, A>(
-    Query(params): Query<ConfirmationParams>,
     State(app_state): State<Arc<AppState<D, S, A>>>,
+    axum::Json(params): axum::Json<ConfirmationParams>,
     // session: Session,
 ) -> impl IntoResponse
 where

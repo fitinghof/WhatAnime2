@@ -55,6 +55,7 @@
     justify-content: center;
     flex-grow: 1;
     pointer-events: none;
+    gap: 5px
 }
 
 .anime-title {
@@ -62,35 +63,7 @@
     font-weight: bold;
 }
 
-.anime-season,
-.anime-opening,
-.anime-type {
-    font-size: 14px;
-}
-
-.anime-season {
-    margin-top: 5px;
-}
-
-.anime-song-title {
-    font-size: 14px;
-    margin-top: 5px;
-}
-
-.anime-artists-names {
-    font-size: 14px;
-    margin-top: 5px;
-}
-
-.anime-type {
-    margin-top: 5px;
-}
-
-.anime-opening {
-    margin-top: 5px;
-}
-
-.anime-episodes {
+.anime-info-text {
     font-size: 14px;
 }
 
