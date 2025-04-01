@@ -12,7 +12,7 @@ use database_api::{
     Database,
     models::{DBAnisong, Report},
 };
-use log::error;
+use log::{error, info};
 use reqwest::Url;
 use serde::{Deserialize, Serialize};
 use spotify_api::{
@@ -67,6 +67,8 @@ pub struct UpdateParams {
     refresh: Option<bool>,
 }
 
+const AUTO_BIND_LIMIT: f32 = 90.0;
+
 pub async fn update<D, S, A>(
     State(app_state): State<Arc<AppState<D, S, A>>>,
     session: Session,
@@ -77,7 +79,7 @@ where
     S: SpotifyAPI + Send + Sync + 'static,
     A: AnisongAPI + Send + Sync + 'static,
 {
-    session.load().await.unwrap();
+    // session.load().await.unwrap();
 
     let token = get_token_data(
         session.clone(),
@@ -124,7 +126,7 @@ where
                     let artist_binds = artist_pairs
                         .into_iter()
                         .filter_map(|a| {
-                            if a.2 > 80.0 {
+                            if a.2 > AUTO_BIND_LIMIT {
                                 Some((a.1.id, a.0.id))
                             } else {
                                 None
@@ -149,12 +151,12 @@ where
                 if !anisongs.is_empty() {
                     let (mut song, artist_pairs) =
                         select_best(anisongs, t.name.clone(), t.artists.clone());
-                    if song.certainty >= 80 {
+                    if song.certainty >= AUTO_BIND_LIMIT as i32 {
                         song.certainty = 100;
                         let artist_binds = artist_pairs
                             .into_iter()
                             .filter_map(|a| {
-                                if a.2 > 80.0 {
+                                if a.2 > AUTO_BIND_LIMIT {
                                     Some((a.1.id, a.0.id))
                                 } else {
                                     None
@@ -188,12 +190,12 @@ where
 
                     let final_search_ids = song.hits[0].song.artists.iter().map(|a| a.id).collect();
                     let hit_song_id = song.hits[0].song.id.expect("must be some");
-                    if song.certainty >= 80 {
+                    if song.certainty >= AUTO_BIND_LIMIT as i32 {
                         song.certainty = 100;
                         let artist_binds = artist_pairs
                             .into_iter()
                             .filter_map(|a| {
-                                if a.2 > 80.0 {
+                                if a.2 > AUTO_BIND_LIMIT {
                                     Some((a.1.id, a.0.id))
                                 } else {
                                     None
@@ -329,18 +331,34 @@ pub struct ConfirmationParams {
 
 pub async fn confirm_anime<D, S, A>(
     State(app_state): State<Arc<AppState<D, S, A>>>,
+    session: Session,
     axum::Json(params): axum::Json<ConfirmationParams>,
-    // session: Session,
 ) -> impl IntoResponse
 where
     D: Database + Send + Sync + 'static,
     S: SpotifyAPI + Send + Sync + 'static,
     A: AnisongAPI + Send + Sync + 'static,
 {
-    app_state
-        .database
-        .bind_songs(vec![(params.song_id, params.spotify_song_id)])
-        .await;
+    let token = get_token_data(
+        session,
+        &app_state.spotify_api,
+        app_state.client_id.clone(),
+        app_state.client_secret.clone(),
+    )
+    .await;
+    if let Ok(Some(token)) = token {
+        let user = app_state.spotify_api.get_user(token.access_token).await;
+        if let Ok(user) = user {
+            info!(
+                "{:?} added bind for {:?}",
+                user.display_name, params.song_id
+            );
+            app_state
+                .database
+                .bind_songs(vec![(params.song_id, params.spotify_song_id)])
+                .await;
+        }
+    }
 }
 
 #[derive(Deserialize, Serialize)]
@@ -379,6 +397,8 @@ where
         Ok(u) => u,
         Err(_) => return Err(axum::http::StatusCode::INTERNAL_SERVER_ERROR),
     };
+    info!("{:?} made a repport!", user.display_name.clone());
+
     let report = Report {
         track_id: params.track_id,
         song_ann_id: params.ann_song_id,

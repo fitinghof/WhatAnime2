@@ -91,6 +91,8 @@ lazy_static! {
         map.insert("2", "[2²₂]");
         map.insert("3", "[3³]");
         map.insert("5", "[5⁵]");
+        map.insert("）", ") |)|）");
+        map.insert("（", "( |(|（");
         map.insert("*", "[*✻＊✳︎]");
         map.insert(" ", "([^\\w]+|_+)");
         map.insert("i", "([iíίɪ]|ii)");

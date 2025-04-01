@@ -133,17 +133,17 @@ const Update = () => {
             </SongContainer>
 
             {"hit" in info.anisongs ? (
-                <div>
+                <>
                     <AnimeList animes={info.anisongs.hit.hits}
                         list_config={{ ...list_config, seperator: `Match ${info.anisongs.hit.certainty} %` }}></AnimeList>
                     <AnimeList animes={info.anisongs.hit.more_by_artists}
                         list_config={{ ...list_config, seperator: "More by artists" }}></AnimeList>
-                </div>
+                </>
             ) : "miss" in info.anisongs ? (
-                <div>
+                <>
                     <AnimeList animes={info.anisongs.miss.possible}
                         list_config={{ ...list_config, seperator: "Possible matches" }}></AnimeList>
-                </div>
+                </>
             ) : null // null case should be impossible
             }
         </>

@@ -76,11 +76,12 @@ pub fn pair_artists(
         pairs.push((artist, eval.1.to_owned(), eval.0));
     });
     let mut artist_set = HashSet::new();
+    let mut artist_set2 = HashSet::new();
     pairs.sort_by(|a, b| {
         b.2.partial_cmp(&a.2)
             .expect("There should only be values [0, 100] here which can be compared")
     });
-    pairs.retain(|p| artist_set.insert(p.0.id.clone()));
+    pairs.retain(|p| artist_set.insert(p.0.id.clone()) && artist_set2.insert(p.1.id.clone()));
     pairs
 }
 

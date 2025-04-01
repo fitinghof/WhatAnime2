@@ -2,8 +2,8 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    width: 100%;
-    margin: 10px 0;
+    width: 90%;
+    margin: 20px auto;
     font-size: 16px;
     font-weight: bold;
 }
@@ -20,11 +20,12 @@
 /* Anime List */
 .anime-list {
     display: flex;
+    width: 100%;
     flex-direction: column;
     align-items: center;
-    gap: 15px;
+    gap: 30px;
     justify-content: center;
     background: #333333;
-    padding: 20px;
+    /* padding: 20px; */
     /*No width cause then it becomes unaligend???*/
 }

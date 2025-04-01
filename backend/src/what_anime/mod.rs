@@ -38,8 +38,15 @@ where
     app_state: Arc<AppState<D, S, A>>,
 }
 
-const FRONTEND_PORT: u16 = 5500;
-const BACKEND_PORT: u16 = 8080;
+#[cfg(debug_assertions)]
+const FRONTEND_PORT: u16 = 5500; // Debug mode port
+#[cfg(debug_assertions)]
+const BACKEND_PORT: u16 = 8080; // Debug mode port
+
+#[cfg(not(debug_assertions))]
+const FRONTEND_PORT: u16 = 5173; // Release mode port
+#[cfg(not(debug_assertions))]
+const BACKEND_PORT: u16 = 8000; // Release mode port
 
 impl<D, S, A> WhatAnime<D, S, A>
 where

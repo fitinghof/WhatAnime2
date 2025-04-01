@@ -1,0 +1,12 @@
+[package]
+name = "fix_media_info"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+database_api = { path = "../../backend/database_api" }
+anilist_api = { path = "../../backend/anilist_api" }
+what_anime_shared = { path = "../../backend/what_anime_shared" }
+sqlx = { version = "0.8.3", features = ["postgres"] }
+tokio = { version = "1.44.1", features = ["macros", "rt-multi-thread"] }
+dotenvy = "0.15.7"

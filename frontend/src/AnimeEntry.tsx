@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import './AnimeEntry.css'
+import "./AnimeEntry.css";
 import { Language } from "./OptionsOverlay";
 
 function parseAnimeIndex(animeIndex: AnimeIndex): string {
@@ -44,11 +44,11 @@ interface AnimeEntryProps {
 }
 
 export interface AnimeEntryConfig {
-  show_confirm_button: boolean,
-  spotify_song_id: string,
-  language: Language,
+  show_confirm_button: boolean;
+  spotify_song_id: string;
+  language: Language;
   after_anime_bind: () => void;
-  open_report_window: (anisong_ann_id: number) => void,
+  open_report_window: (anisong_ann_id: number) => void;
 }
 
 function linked_ids(anime_ids: AnimeListLinks) {
@@ -114,20 +114,28 @@ const AnimeEntry: React.FC<AnimeEntryProps> = ({ anime, config }) => {
       },
       body: JSON.stringify(params),
     })
-      .then(response => response.text())
-      .then(data => {
+      .then((response) => response.text())
+      .then((data) => {
         console.log(data);
         config.after_anime_bind();
-      })
+      });
   };
 
   let animeSongNumber = parseTrackIndex(anime.bind.song_index);
   let animeIndex = parseAnimeIndex(anime.anime.anime_index);
   let source = formatSource(anime.anime.source);
   let release_season = formatReleaseSeason(anime.anime.vintage?.season);
-  let title = config.language === "eng" ? anime.anime.eng_name : anime.anime.jpn_name;
+  let title =
+    config.language === "eng" ? anime.anime.eng_name : anime.anime.jpn_name;
   return (
-    <div className="anime-item" style={{ backgroundImage: `linear-gradient(rgba(0, 0, 0, 0.5), rgba(0, 0, 0, 0.5)), url(${anime.anime.banner_image ?? "/amq_icon_green.svg"})` }}>
+    <div
+      className="anime-item"
+      style={{
+        backgroundImage: `linear-gradient(rgba(0, 0, 0, 0.5), rgba(0, 0, 0, 0.5)), url(${anime.anime.banner_image ?? "/amq_icon_green.svg"
+          })`,
+      }}
+      onClick={() => setShowMoreInfo(!showMoreInfo)}
+    >
       <div className="left-info-container">
         <img
           src={anime.anime.cover_image.medium ?? "/amq_icon_green.svg"}
@@ -140,7 +148,10 @@ const AnimeEntry: React.FC<AnimeEntryProps> = ({ anime, config }) => {
         {showMoreInfo && (
           <div className="report-button-container">
             <button
-              onClick={() => config.open_report_window(anime.bind.song_ann_id)}
+              onClick={(event) => {
+                event.stopPropagation();
+                config.open_report_window(anime.bind.song_ann_id);
+              }}
               className="report-button"
             >
               Report
@@ -148,78 +159,107 @@ const AnimeEntry: React.FC<AnimeEntryProps> = ({ anime, config }) => {
           </div>
         )}
       </div>
-      <div className="anime-info">
-        <div className="anime-title">
-          {title || "Unknown Anime"}
+      <div className="anisong-info-container">
+        <div className="anime-title">{title || "Unknown Anime"}</div>
+        <div className="anisong-info">
+          {showMoreInfo && (
+            <div className="extra-info">
+              <div className="anime-song-separator">Song info</div>
+
+              {/* Insert x */}
+              <div className="anime-info-text">{animeSongNumber}</div>
+
+              {/* Song name */}
+              <div className="anime-info-text">
+                {`Song: ${anime.song.name}`}
+              </div>
+
+              {/* Artists */}
+              <div className="anime-info-text">
+                {`Artists: ${anime.song.artists
+                  .map((a) => a.names[0])
+                  .join(", ")}`}
+              </div>
+
+              {/* Composers */}
+              <div className="anime-info-text">
+                {`Composers: ${anime.song.composers
+                  .map((a) => a.names[0])
+                  .join(", ")}`}
+              </div>
+
+              {/* Arrangers */}
+              <div className="anime-info-text">
+                {`Arrangers: ${anime.song.arrangers
+                  .map((a) => a.names[0])
+                  .join(", ")}`}
+              </div>
+            </div>
+          )}
+          {showMoreInfo && (
+            <div
+              className="extra-info"
+              onClick={() => setShowMoreInfo(!showMoreInfo)}
+            >
+              <div className="anime-song-separator">Anime info</div>
+
+              {/* Season */}
+              <div className="anime-info-text">{`${animeIndex}`}</div>
+
+              {/* Episodes */}
+              {anime.anime.episodes && (
+                <div className="anime-info-text">
+                  {`Episodes: ${anime.anime.episodes}`}
+                </div>
+              )}
+
+              {/* Release date */}
+              {anime.anime.vintage && (
+                <div className="anime-info-text">
+                  {`Release: ${release_season} ${anime.anime.vintage.year}`}
+                </div>
+              )}
+
+              {/* Source */}
+              {source && (
+                <div className="anime-info-text">{`Source: ${source}`}</div>
+              )}
+
+              {/* Anime Type */}
+              <div className="anime-info-text">
+                {`Type: ${anime.anime.anime_type || "Unknown"}`}
+              </div>
+
+              {/* Anime Type */}
+              {anime.anime.genres.length !== 0 && (
+                <div className="anime-info-text">
+                  {`Genres: ${anime.anime.genres.join(", ")}`}
+                </div>
+              )}
+
+              {/* Studios */}
+              {anime.anime.studios.nodes.length !== 0 && false && (
+                <div className="anime-info-text">
+                  {`Studios: ${anime.anime.studios.nodes.map((a) => a.name).join(", ")}`}
+                </div>
+              )}
+            </div>
+          )}
         </div>
-        {showMoreInfo &&
-          <div className="extra-info">
-
-            {/* Song name */}
-            <div className="anime-info-text">
-              {`Song Title: ${anime.song.name}`}
-            </div>
-
-            {/* Artists */}
-            <div className="anime-info-text">
-              {`Artists: ${anime.song.artists.map(a => a.names[0]).join(", ")}`}
-            </div>
-
-            {/* Composers */}
-            <div className="anime-info-text">
-              {`Composers: ${anime.song.composers.map(a => a.names[0]).join(", ")}`}
-            </div>
-
-            {/* Season x */}
-            <div className="anime-info-text">
-              {`${animeIndex}`}
-            </div>
-            {/* Episodes */}
-            {anime.anime.episodes && (
-              <div className="anime-info-text">
-                {`Episodes: ${anime.anime.episodes}`}
-              </div>
-            )}
-            {/* Insert x */}
-            <div className="anime-info-text">
-              {animeSongNumber}
-            </div>
-
-            {anime.anime.vintage && (
-              <div className="anime-info-text">
-                {`Release: ${release_season} ${anime.anime.vintage.year}`}
-              </div>
-            )}
-
-            {source && (
-              <div className="anime-info-text">
-                {`Source: ${source}`}
-              </div>
-            )}
-
-
-            <div className="anime-info-text">
-              {`Type: ${anime.anime.anime_type || "Unknown"}`}
-            </div>
-            {linked_ids(anime.anime.linked_ids)}
-          </div>
-        }
-
-        {/* Toggle Button */}
-        <button className="toggle-extra-info-button" onClick={() => setShowMoreInfo(!showMoreInfo)}>
-          {showMoreInfo ? "Hide Info" : "Show More Info"}
-        </button>
+        {showMoreInfo && linked_ids(anime.anime.linked_ids)}
       </div>
       <div className="right-info-container">
         <div className="anime-score">
-          <div className="score-text">
-            {
-              anime.anime.mean_score ?? ""
-            }
-          </div>
+          <div className="score-text">{anime.anime.mean_score ?? ""}</div>
         </div>
         {config.show_confirm_button && showMoreInfo && (
-          <button className="bind-anime-button" onClick={handleConfirmClick}>
+          <button
+            className="bind-anime-button"
+            onClick={(event) => {
+              event.stopPropagation();
+              handleConfirmClick();
+            }}
+          >
             <p>
               Confirm<br></br> Anime
             </p>
@@ -329,12 +369,12 @@ export interface CoverImage {
 }
 
 export interface StudioConnection {
-  edges: StudioEdge[]; // List of studio edges
+  nodes: Studio[]; // List of studio edges
 }
 
-export interface StudioEdge {
-  node: Studio; // Studio information
-}
+// export interface StudioEdge {
+//   node: Studio; // Studio information
+// }
 
 export interface Studio {
   id: number; // Studio ID
@@ -353,38 +393,60 @@ export interface MediaTrailer {
 
 export interface AnimeTrackIndex {
   index: number; // Index of the song (e.g., Opening 1, Ending 2)
-  index_type: SongIndexType,
+  index_type: SongIndexType;
 }
 
-export type SongIndexType = "Opening" | "Insert" | "Ending"
+export type SongIndexType = "Opening" | "Insert" | "Ending";
 
 export type AnimeType = "TV" | "Movie" | "OVA" | "ONA" | "Special";
 
 export type ReleaseSeason = "SPRING" | "SUMMER" | "FALL" | "WINTER";
 
-export type MediaFormat = "TV" | "TV_SHORT" | "MOVIE" | "OVA" | "ONA" | "SPECIAL";
+export type MediaFormat =
+  | "TV"
+  | "TV_SHORT"
+  | "MOVIE"
+  | "OVA"
+  | "ONA"
+  | "SPECIAL";
 
-export type MediaSource = "MANGA" | "LIGHT_NOVEL" | "ORIGINAL" | "GAME" | "OTHER";
+export type MediaSource =
+  | "MANGA"
+  | "LIGHT_NOVEL"
+  | "ORIGINAL"
+  | "GAME"
+  | "OTHER";
 
 export type SongCategory = "Opening" | "Ending" | "Insert";
 
-function formatReleaseSeason(release_season: ReleaseSeason | undefined): string | null {
+function formatReleaseSeason(
+  release_season: ReleaseSeason | undefined
+): string | null {
   switch (release_season) {
-    case "SPRING": return "Spring";
-    case "SUMMER": return "Summer";
-    case "FALL": return "Fall";
-    case "WINTER": return "Winter";
+    case "SPRING":
+      return "Spring";
+    case "SUMMER":
+      return "Summer";
+    case "FALL":
+      return "Fall";
+    case "WINTER":
+      return "Winter";
   }
   return null;
 }
 
 function formatSource(source: MediaSource | undefined): string | null {
   switch (source) {
-    case "GAME": return "Game";
-    case "LIGHT_NOVEL": return "Light Novel";
-    case "MANGA": return "Manga";
-    case "ORIGINAL": return "Original";
-    case "OTHER": return null;
+    case "GAME":
+      return "Game";
+    case "LIGHT_NOVEL":
+      return "Light Novel";
+    case "MANGA":
+      return "Manga";
+    case "ORIGINAL":
+      return "Original";
+    case "OTHER":
+      return null;
   }
-  return null
+  return null;
 }

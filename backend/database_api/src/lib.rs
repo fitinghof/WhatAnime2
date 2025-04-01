@@ -69,7 +69,7 @@ pub trait Database {
 }
 
 pub struct DatabaseR {
-    pool: sqlx::Pool<sqlx::Postgres>,
+    pub pool: sqlx::Pool<sqlx::Postgres>,
 }
 
 impl DatabaseR {
