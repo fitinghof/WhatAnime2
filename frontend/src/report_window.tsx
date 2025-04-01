@@ -4,16 +4,16 @@ import './report_window.css'
 
 interface ReportInfo {
     ann_song_id: number | null,
-    spotify_song_id: string,
+    track_id: string,
     hide: () => void,
 }
 
-const ReportButton: React.FC<ReportInfo> = ({ ann_song_id, spotify_song_id, hide }) => {
+const ReportButton: React.FC<ReportInfo> = ({ ann_song_id, track_id: spotify_song_id, hide }) => {
     const [message, setReason] = useState(""); // Stores the report reason
 
     const handleSubmit = () => {
         const params = {
-            spotify_id: spotify_song_id,
+            track_id: spotify_song_id,
             ann_song_id: ann_song_id,
             message: message,
         };

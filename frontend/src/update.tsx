@@ -8,7 +8,9 @@ import OptionsOverlay, { Settings } from "./OptionsOverlay";
 const defaultState: SongUpdate = {
     song_info: {
         song_name: "Not Playing Anything",
+        romanized_song_name: "Not Playing Anything",
         song_artists: [],
+        romanized_artists: [],
         album_image: "/amq_icon_green.svg",
         spotify_song_id: "",
     },
@@ -19,6 +21,7 @@ const defaultSettings: Settings = {
     showOpenings: true,
     showInserts: true,
     showEndings: true,
+    romanizeSongInfo: false,
     language: "eng",
 }
 
@@ -56,7 +59,6 @@ const Update = () => {
         }))
     }
 
-
     const fetchUpdate = (refresh: boolean = false, recursive: boolean = true) => {
         const fetch_address = `/api/update${refresh ? "?refresh=true" : ""}`;
         //const fetch_address = "";
@@ -76,7 +78,9 @@ const Update = () => {
                                     song_name: "You likely need to ask Simon for User Approval, spotify is annoying that way.",
                                     song_artists: ["You will have to provide your spotify mail and full name for approval"],
                                     album_image: "/amq_icon_green.svg",
-                                    spotify_song_id: ""
+                                    spotify_song_id: "",
+                                    romanized_song_name: "You likely need to ask Simon for User Approval, spotify is annoying that way.",
+                                    romanized_artists: ["You will have to provide your spotify mail and full name for approval"],
                                 },
                                 anisongs: { miss: { possible: [] } }
                             });
@@ -113,10 +117,11 @@ const Update = () => {
     return (
         <>
             {reportOverlay.show && (
-                <div>
-                    <ReportButton spotify_song_id={info.song_info.spotify_song_id} hide={() => setReportOverlay((p) => ({ ...p, show: false, }))} ann_song_id={null}>
-                    </ReportButton>
-                </div>
+                <ReportButton
+                    track_id={info.song_info.spotify_song_id}
+                    hide={() => setReportOverlay((p) => ({ ...p, show: false, }))}
+                    ann_song_id={reportOverlay.song_ann_id}>
+                </ReportButton>
             )}
 
             {showSettings && (
@@ -124,7 +129,7 @@ const Update = () => {
                     onSettingsChange={onSettingsUpdate}></OptionsOverlay>
             )}
 
-            <SongContainer song_info={info.song_info} showSettingsOverlay={() => setShowSettings(true)}>
+            <SongContainer song_info={info.song_info} showSettingsOverlay={() => setShowSettings(true)} romanizeContent={settings.romanizeSongInfo}>
             </SongContainer>
 
             {"hit" in info.anisongs ? (

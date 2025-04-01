@@ -130,6 +130,12 @@ async fn main() {
         );
         return;
     }
+    if end_year < start_year || ((end_year == start_year) && end_season < start_season) {
+        eprintln!(
+            "End cannot be before start",
+        );
+        return;
+    }
 
     let anisong = AnisongAPIR::new();
     let anilist = AnilistAPIR::new();
@@ -144,7 +150,7 @@ async fn main() {
     start_season -= 1;
     end_season -= 1;
     // Fall 1959 has something
-    let mut ticker = tokio::time::interval(tokio::time::Duration::from_secs(1));
+    let mut ticker = tokio::time::interval(tokio::time::Duration::from_secs(6));
     loop {
         let release = Release {
             season: seasons[start_season as usize].clone(),

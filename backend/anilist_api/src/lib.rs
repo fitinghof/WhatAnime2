@@ -1,10 +1,12 @@
 pub mod models;
 use log::error;
+use log::warn;
 pub use models::Media;
 use reqwest::Client;
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 pub use what_anime_shared::AnilistAnimeID;
+pub use what_anime_shared::error;
 
 pub trait AnilistAPI {
     fn fetch_one(
@@ -14,7 +16,7 @@ pub trait AnilistAPI {
     fn fetch_many(
         &self,
         ids: Vec<AnilistAnimeID>,
-    ) -> impl std::future::Future<Output = Vec<Media>> + Send;
+    ) -> impl std::future::Future<Output = Result<Vec<Media>, what_anime_shared::error::Error>> + Send;
 }
 pub struct AnilistAPIR {
     client: Client,
@@ -32,11 +34,23 @@ impl AnilistAPIR {
 impl AnilistAPI for AnilistAPIR {
     async fn fetch_one(&self, id: AnilistAnimeID) -> Option<Media> {
         let anime = self.fetch_many(vec![id]).await;
-        anime.into_iter().next()
+        match anime {
+            Ok(a) => a.into_iter().next(),
+            Err(_) => None,
+        }
     }
-    async fn fetch_many(&self, ids: Vec<AnilistAnimeID>) -> Vec<Media> {
+    async fn fetch_many(
+        &self,
+        ids: Vec<AnilistAnimeID>,
+    ) -> Result<Vec<Media>, what_anime_shared::error::Error> {
         if ids.is_empty() {
-            return vec![];
+            return Ok(vec![]);
+        }
+
+        if ids.len() > 50 {
+            warn!(
+                "It is unrecommended to pass more than 50 ids as this will lead to multiple instant fetches from anilist"
+            );
         }
 
         let mut all_media: Vec<Media> = Vec::new();
@@ -54,13 +68,19 @@ impl AnilistAPI for AnilistAPIR {
                 }
             });
 
-            let response = self
+            let response = match self
                 .client
                 .post("https://graphql.anilist.co")
                 .json(&json_body)
                 .send()
                 .await
-                .unwrap();
+            {
+                Ok(r) => r,
+                Err(e) => {
+                    error!("Request Failed! {:?}", e);
+                    return Err(error::Error::from(e));
+                }
+            };
 
             if response.status().is_success() {
                 let data: AnilistResponse = response.json().await.unwrap();
@@ -76,7 +96,7 @@ impl AnilistAPI for AnilistAPIR {
             }
         }
         all_media.sort_by(|a, b| a.id.cmp(&b.id));
-        all_media
+        Ok(all_media)
     }
 }
 

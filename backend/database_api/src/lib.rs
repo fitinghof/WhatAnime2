@@ -1,8 +1,8 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::env;
 
+use anilist_api::Media;
 use anilist_api::models::TagID;
-use anilist_api::{AnilistAPI, AnilistAPIR};
 
 use anisong_api::models::{Anisong, AnisongAnime, AnisongArtistID, AnisongBind, AnisongSong};
 
@@ -11,7 +11,7 @@ use models::{DBAnime, DBAnisong, DBAnisongBind, Report, SimplifiedAnisongSong, S
 use sqlx::QueryBuilder;
 use sqlx::migrate;
 use sqlx::{self, Postgres, postgres::PgPoolOptions};
-use what_anime_shared::{AnilistAnimeID, SongID, SpotifyArtistID, SpotifyTrackID, URL};
+use what_anime_shared::{SongID, SpotifyArtistID, SpotifyTrackID, URL};
 
 pub mod models;
 pub mod regex;
@@ -56,7 +56,7 @@ pub trait Database {
     fn add_from_anisongs(
         &self,
         anisongs: Vec<Anisong>,
-        anilist_con: &AnilistAPIR,
+        media: Vec<Media>,
     ) -> impl std::future::Future<Output = ()> + Send;
     fn add_report(&self, report: Report) -> impl std::future::Future<Output = ()> + Send;
     fn full_search(
@@ -227,7 +227,43 @@ impl Database for DatabaseR {
                 .push_bind(anime.vintage.map(|v| v.year));
         });
 
-        query_builder.push(" ON CONFLICT ( ann_id ) DO NOTHING");
+        query_builder.push(
+            r#" ON CONFLICT ( ann_id ) DO UPDATE SET
+            eng_name = COALESCE(EXCLUDED.eng_name, animes.eng_name),
+            jpn_name = COALESCE(EXCLUDED.jpn_name, animes.jpn_name), 
+            alt_names = array_unique(EXCLUDED.alt_names, animes.alt_names), 
+            myanimelist_id = COALESCE(EXCLUDED.myanimelist_id, animes.myanimelist_id), 
+            anidb_id = COALESCE(EXCLUDED.anidb_id, animes.anidb_id), 
+            anilist_id = COALESCE(EXCLUDED.anilist_id, animes.anilist_id), 
+            kitsu_id = COALESCE(EXCLUDED.kitsu_id, animes.kitsu_id), 
+            anime_type = COALESCE(EXCLUDED.anime_type, animes.anime_type), 
+            index_type = COALESCE(EXCLUDED.index_type, animes.index_type), 
+            index_number = COALESCE(EXCLUDED.index_number, animes.index_number),
+            index_part = COALESCE(EXCLUDED.index_part, animes.index_part), 
+            mean_score = COALESCE(EXCLUDED.mean_score, animes.mean_score), 
+            banner_image = COALESCE(EXCLUDED.banner_image, animes.banner_image), 
+            cover_image_color = COALESCE(EXCLUDED.cover_image_color, animes.cover_image_color), 
+            cover_image_medium = COALESCE(EXCLUDED.cover_image_medium, animes.cover_image_medium), 
+            cover_image_large = COALESCE(EXCLUDED.cover_image_large, animes.cover_image_large), 
+            cover_image_extra_large = COALESCE(EXCLUDED.cover_image_extra_large, animes.cover_image_extra_large), 
+            format = COALESCE(EXCLUDED.format, animes.format), 
+            genres = COALESCE(EXCLUDED.genres, animes.genres), 
+            source = COALESCE(EXCLUDED.source, animes.source), 
+            studios_id = COALESCE(EXCLUDED.studios_id, animes.studios_id), 
+            studios_name = COALESCE(EXCLUDED.studios_name, animes.studios_name), 
+            studios_url = COALESCE(EXCLUDED.studios_url, animes.studios_url), 
+            tags_id = COALESCE(EXCLUDED.tags_id, animes.tags_id), 
+            tags_name = COALESCE(EXCLUDED.tags_name, animes.tags_name), 
+            trailer_id = COALESCE(EXCLUDED.trailer_id, animes.trailer_id), 
+            trailer_site = COALESCE(EXCLUDED.trailer_site, animes.trailer_site), 
+            trailer_thumbnail = COALESCE(EXCLUDED.trailer_thumbnail, animes.trailer_thumbnail), 
+            episodes = COALESCE(EXCLUDED.episodes, animes.episodes),
+            season = COALESCE(EXCLUDED.season, animes.season), 
+            season_year = COALESCE(EXCLUDED.season_year, animes.season_year), 
+            vintage_release_season = COALESCE(EXCLUDED.vintage_release_season, animes.vintage_release_season), 
+            vintage_release_year = COALESCE(EXCLUDED.vintage_release_year, animes.vintage_release_year);
+        "#,
+        );
 
         query_builder
             .build()
@@ -251,7 +287,14 @@ impl Database for DatabaseR {
                 .push_bind(artist.group_ids)
                 .push_bind(artist.member_ids);
         });
-        query_builder.push(" ON CONFLICT DO NOTHING");
+        query_builder.push(
+            r#" ON CONFLICT DO UPDATE SET
+        names = array_unique(artists.names, EXCLUDED.names),
+        group_ids = array_unique(artists.group_ids, EXCLUDED.group_ids),
+        member_ids = array_unique(artists.group_ids, EXCLUDED.group_ids),
+        line_up_id = EXCLUDED.line_up_id
+        "#,
+        );
         query_builder
             .build()
             .execute(&self.pool)
@@ -348,16 +391,15 @@ impl Database for DatabaseR {
             .unwrap()
             .rows_affected()
     }
-    async fn add_from_anisongs(&self, anisongs: Vec<Anisong>, anilist_con: &AnilistAPIR) {
-        let anilist_ids: Vec<AnilistAnimeID> = anisongs
-            .iter()
-            .filter_map(|a| a.anime.linked_ids.anilist)
-            .collect();
-        let (anime, (bind, song)): (Vec<AnisongAnime>, (Vec<AnisongBind>, Vec<AnisongSong>)) =
+    async fn add_from_anisongs(&self, anisongs: Vec<Anisong>, media: Vec<Media>) {
+        let (mut anime, (bind, song)): (Vec<AnisongAnime>, (Vec<AnisongBind>, Vec<AnisongSong>)) =
             anisongs
                 .into_iter()
                 .map(|a| (a.anime, (a.anisong_bind, a.song)))
                 .unzip();
+
+        let mut anime_set = HashSet::new();
+        anime.retain(|a| anime_set.insert(a.ann_id));
 
         let (simplified_song, artists) = SimplifiedAnisongSong::decompose_all(song);
 
@@ -390,7 +432,6 @@ impl Database for DatabaseR {
                 };
             });
 
-        let media = anilist_con.fetch_many(anilist_ids).await;
         let db_animes = DBAnime::combine(anime, media);
 
         self.add_animes(db_animes).await;

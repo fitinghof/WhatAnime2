@@ -1,4 +1,3 @@
-mod error;
 mod utility;
 mod what_anime;
 

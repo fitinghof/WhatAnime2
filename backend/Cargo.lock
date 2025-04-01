@@ -229,11 +229,13 @@ dependencies = [
  "anilist_api",
  "anisong_api",
  "axum",
+ "chrono",
  "database_api",
  "dotenvy",
  "env_logger",
  "futures",
  "fuzzywuzzy",
+ "itertools",
  "kakasi",
  "log",
  "reqwest",
@@ -442,6 +444,7 @@ version = "0.1.0"
 dependencies = [
  "anilist_api",
  "anisong_api",
+ "chrono",
  "deunicode",
  "dotenvy",
  "fuzzywuzzy",
@@ -2858,6 +2861,7 @@ dependencies = [
 name = "what_anime_shared"
 version = "0.1.0"
 dependencies = [
+ "reqwest",
  "serde",
  "sqlx",
 ]

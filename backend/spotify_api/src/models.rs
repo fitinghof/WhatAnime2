@@ -99,6 +99,7 @@ pub struct SimplifiedArtist {
     pub name: String,
 }
 
+#[derive(Debug)]
 pub struct SpotifyError {
     pub status: StatusCode,
     pub message: String,
@@ -122,6 +123,7 @@ impl<'de> Deserialize<'de> for SpotifyError {
     }
 }
 
+#[derive(Debug)]
 pub enum Error {
     SpotifyError(SpotifyError),
     ParseError(String),

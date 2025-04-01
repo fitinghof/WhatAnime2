@@ -1,4 +1,5 @@
 use std::str::FromStr;
+pub mod error;
 
 use serde::{Deserialize, Serialize};
 use sqlx::{
@@ -67,6 +68,19 @@ pub enum ReleaseSeason {
     Spring,
     Summer,
     Fall,
+}
+
+impl TryFrom<u32> for ReleaseSeason {
+    fn try_from(value: u32) -> Result<Self, Self::Error> {
+        match value {
+            0 => Ok(ReleaseSeason::Winter),
+            1 => Ok(ReleaseSeason::Spring),
+            2 => Ok(ReleaseSeason::Summer),
+            3 => Ok(ReleaseSeason::Fall),
+            _ => Err(()),
+        }
+    }
+    type Error = ();
 }
 
 impl<'r> sqlx::Decode<'r, sqlx::Postgres> for ReleaseSeason {

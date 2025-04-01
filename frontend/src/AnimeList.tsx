@@ -42,6 +42,11 @@ const AnimeList: React.FC<AnimeListProps> = ({ animes, list_config }) => {
     };
 
     let animes_filtered = animes.filter(value => visible(value, list_config));
+    animes_filtered.sort((a, b) => {
+        const title_a = (list_config.language === "eng") ? a.anime.eng_name : a.anime.jpn_name;
+        const title_b = (list_config.language === "eng") ? b.anime.eng_name : b.anime.jpn_name;
+        return title_a.localeCompare(title_b);
+    })
     return (
         <>
             {animes_filtered.length != 0 && (
@@ -56,7 +61,7 @@ const AnimeList: React.FC<AnimeListProps> = ({ animes, list_config }) => {
 
                     < div className="anime-list" id="animes" >
                         {
-                            animes.map((anime, index) => (
+                            animes_filtered.map((anime, index) => (
                                 <AnimeEntry key={index} anime={anime} config={anime_config} />
                             ))
                         }

@@ -94,7 +94,7 @@
 
 .setting-buttons {
     color: azure;
-    width: auto;
+    width: fit-content;
     height: 25px;
     padding: 0px, 12px;
     align-items: center;

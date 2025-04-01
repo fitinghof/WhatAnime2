@@ -1,13 +1,18 @@
-use std::f32;
+use std::{collections::HashSet, f32};
 
-use database_api::models::DBAnisong;
+use anilist_api::AnilistAPI;
+use anisong_api::{AnisongAPI, models::Release};
+use chrono::Datelike;
+use database_api::{Database, models::DBAnisong};
 use fuzzywuzzy;
 use kakasi;
+use log::error;
 use spotify_api::models::SimplifiedArtist;
 
 use database_api::regex::{
     normalize_text, process_artist_name, process_possible_japanese, process_similarity,
 };
+use what_anime_shared::ReleaseSeason;
 
 use super::models::NewSongHit;
 
@@ -70,6 +75,12 @@ pub fn pair_artists(
             .unwrap();
         pairs.push((artist, eval.1.to_owned(), eval.0));
     });
+    let mut artist_set = HashSet::new();
+    pairs.sort_by(|a, b| {
+        b.2.partial_cmp(&a.2)
+            .expect("There should only be values [0, 100] here which can be compared")
+    });
+    pairs.retain(|p| artist_set.insert(p.0.id.clone()));
     pairs
 }
 
@@ -102,11 +113,11 @@ pub fn select_best(
         .map(|a| {
             let name_score = process_similarity(&song_name, &a.song.name);
             let artist_pairs = pair_artists(artists.clone(), a.song.artists.clone());
-            let num_pairs = artist_pairs.len();
+            let num_artists = std::cmp::max(artists.len(), a.song.artists.len());
 
             let mut artist_score = 0.0;
             artist_pairs.iter().for_each(|a| artist_score += a.2);
-            artist_score /= num_pairs as f32;
+            artist_score /= num_artists as f32;
 
             let score = (name_score + artist_score) / 2.0;
             if score > certainty {
@@ -132,4 +143,53 @@ pub fn select_best(
         },
         best_artist_pairs,
     )
+}
+
+pub async fn update_current_season<D, A, B>(db: &D, anisong: &A, anilist: &B) -> u64
+where
+    D: Database + 'static + Send + Sync,
+    A: AnisongAPI + 'static + Send + Sync,
+    B: AnilistAPI + 'static + Send + Sync,
+{
+    let now = chrono::Local::now();
+    let year = now.year();
+    let month = now.month();
+    let season = match ReleaseSeason::try_from((month - 1) / 4) {
+        Ok(s) => s,
+        Err(e) => {
+            error!("How? Error: {:?}", e);
+            return 0;
+        }
+    };
+    let release = Release { season, year };
+    let anisongs = match anisong.get_anime_season(release).await {
+        Ok(a) => a,
+        Err(e) => {
+            error!("Failed anisong fetch! Error: {:?}", e);
+            return 0;
+        }
+    };
+    let ids: HashSet<what_anime_shared::AnilistAnimeID> = anisongs
+        .iter()
+        .filter_map(|a| a.anime.linked_ids.anilist)
+        .collect();
+
+    let mut media: Vec<anilist_api::Media> = Vec::with_capacity(ids.len());
+    let mut ticker = tokio::time::interval(tokio::time::Duration::from_secs(1));
+    let ids: Vec<_> = ids.into_iter().collect();
+    for chunk in ids.chunks(50) {
+        ticker.tick().await;
+        let mut new = match anilist.fetch_many(chunk.to_vec()).await {
+            Ok(m) => m,
+            Err(e) => {
+                error!("Got error from anilist_api, Error {:?}", e);
+                vec![]
+            }
+        };
+        media.append(&mut new);
+    }
+
+    let numof = anisongs.len();
+    db.add_from_anisongs(anisongs, media).await;
+    numof as u64
 }

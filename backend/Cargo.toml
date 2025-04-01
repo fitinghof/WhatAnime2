@@ -28,3 +28,5 @@ tower-http = { version = "0.6.2", features = ["cors"] }
 kakasi = "0.1.0"
 fuzzywuzzy = "0.0.2"
 dotenvy = "0.15.7"
+chrono = "0.4.40"
+itertools = "0.14.0"

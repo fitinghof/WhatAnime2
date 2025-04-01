@@ -2,12 +2,14 @@ mod models;
 mod routes;
 mod utility;
 
+use anilist_api::AnilistAPIR;
 use anisong_api::AnisongAPI;
 use axum::Router;
 use axum::http::HeaderValue;
 use axum::routing::get;
 use axum::routing::post;
 use database_api::Database;
+use log::info;
 use reqwest::Method;
 use reqwest::Url;
 use reqwest::header::ACCEPT;
@@ -21,6 +23,7 @@ use spotify_api::models::ClientID;
 use spotify_api::models::ClientSecret;
 use std::str::FromStr;
 use std::sync::Arc;
+use tokio::time::interval;
 use tower_http::cors::CorsLayer;
 use tower_sessions::MemoryStore;
 use tower_sessions::SessionManagerLayer;
@@ -73,7 +76,31 @@ where
             .with_secure(false)
             .with_same_site(cookie::SameSite::Lax)
             .with_always_save(true);
+
         //.with_expiry(Expiry::OnInactivity(Duration::seconds(10)));
+
+        let app_state_new = self.app_state.clone();
+        tokio::task::spawn(async move {
+            let interval_duration = tokio::time::Duration::from_secs(60 * 60); // 1 hour
+            let mut interval = interval(interval_duration);
+            let mut counter = 0;
+            let anilist = AnilistAPIR::new();
+            loop {
+                counter += 1;
+                if counter == 24 {
+                    counter = 0;
+                    let fetches = utility::update_current_season(
+                        &app_state_new.database,
+                        &app_state_new._anisong_api,
+                        &anilist,
+                    )
+                    .await;
+                    info!("Fetched {} from anisong and updated data", fetches);
+                }
+                interval.tick().await;
+                info!("Sent Heartbeat");
+            }
+        });
 
         // migrate_database(&shared_state.database).await;
 

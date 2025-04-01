@@ -1,4 +1,7 @@
-use std::sync::Arc;
+use std::{
+    sync::Arc,
+    time::{SystemTime, UNIX_EPOCH},
+};
 
 use anisong_api::{AnisongAPI, models::SongAnnId};
 use axum::{
@@ -76,12 +79,19 @@ where
 {
     session.load().await.unwrap();
 
-    let token = match get_token_data(session.clone()).await.unwrap() {
+    let token = get_token_data(
+        session.clone(),
+        &app_state.spotify_api,
+        app_state.client_id.clone(),
+        app_state.client_secret.clone(),
+    )
+    .await
+    .unwrap();
+
+    let token = match token {
         Some(t) => t,
         None => return axum::Json(models::Update::LoginRequired),
     };
-
-    // Add expiry check
 
     match app_state.spotify_api.get_current(token.access_token).await {
         Ok(p) => match p {
@@ -286,13 +296,21 @@ where
         Err(e) => match e {
             _ => return Err(axum::http::StatusCode::INTERNAL_SERVER_ERROR),
         },
-        Ok(v) => match insert_token_data(session.clone(), v).await {
-            Ok(_) => {}
-            Err(e) => {
-                error!("Token insertion failed: {}", e);
-                return Err(axum::http::StatusCode::INTERNAL_SERVER_ERROR);
+        Ok(mut v) => {
+            v.expires_in = SystemTime::now()
+                .duration_since(UNIX_EPOCH)
+                .expect("Time went backwards")
+                .as_secs()
+                + v.expires_in;
+            let res = insert_token_data(session.clone(), v).await;
+            match res {
+                Ok(_) => {}
+                Err(e) => {
+                    error!("Token insertion failed: {}", e);
+                    return Err(axum::http::StatusCode::INTERNAL_SERVER_ERROR);
+                }
             }
-        },
+        }
     }
 
     session.save().await.unwrap();
@@ -342,7 +360,14 @@ where
     S: SpotifyAPI + Send + Sync + 'static,
     A: AnisongAPI + Send + Sync + 'static,
 {
-    let token_data = match get_token_data(session.clone()).await {
+    let token_data = match get_token_data(
+        session.clone(),
+        &app_state.spotify_api,
+        app_state.client_id.clone(),
+        app_state.client_secret.clone(),
+    )
+    .await
+    {
         Ok(Some(v)) => v,
         _ => return Err(axum::http::StatusCode::INTERNAL_SERVER_ERROR),
     };
@@ -381,10 +406,35 @@ async fn insert_token_data(
 ) -> Result<(), tower_sessions::session::Error> {
     session.insert("token", token_data).await
 }
-async fn get_token_data(
+async fn get_token_data<T: SpotifyAPI>(
     session: Session,
+    spotify_api: &T,
+    client_id: ClientID,
+    client_secret: ClientSecret,
 ) -> Result<Option<TokenResponse>, tower_sessions::session::Error> {
-    session.get("token").await
+    let token = session.get::<TokenResponse>("token").await?;
+    if let Some(t) = token.as_ref() {
+        if t.expires_in
+            < SystemTime::now()
+                .duration_since(UNIX_EPOCH)
+                .expect("Time went backwards")
+                .as_secs()
+        {
+            if let Some(refresh) = t.refresh_token.clone() {
+                match spotify_api
+                    .refresh_token(refresh, client_id, client_secret)
+                    .await
+                {
+                    Ok(t) => return Ok(Some(t)),
+                    Err(e) => {
+                        error!("Failed to refresh token! Error: {:?}", e);
+                        return Ok(None);
+                    }
+                }
+            }
+        }
+    }
+    Ok(token)
 }
 async fn insert_prev_played(
     session: Session,

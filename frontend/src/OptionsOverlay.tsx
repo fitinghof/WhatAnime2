@@ -1,5 +1,5 @@
 import React from "react";
-import { useState } from "react";
+// import { useState } from "react";
 import './OptionsOverlay.css'
 
 interface SettingsProp {
@@ -12,6 +12,7 @@ export interface Settings {
     showOpenings: boolean,
     showInserts: boolean,
     showEndings: boolean,
+    romanizeSongInfo: boolean,
 
     language: Language,
 }
@@ -46,6 +47,10 @@ const OptionsOverlay: React.FC<SettingsProp> = ({ settings, hide, onSettingsChan
                         onClick={() => onSettingsChange({ ...settings, language: "jpn" })}>
                         Japanese</button>
                 </div>
+                <div className="setting-header">More</div>
+                <button className={`setting-buttons ${settings.romanizeSongInfo ? "on-color" : "off-color"}`}
+                    onClick={() => onSettingsChange({ ...settings, romanizeSongInfo: !settings.romanizeSongInfo })}>
+                    Romanize song info</button>
             </div>
         </div>
     );
