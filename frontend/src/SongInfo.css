@@ -31,6 +31,7 @@ border: none; */
 
 .now-playing {
     display: flex;
+    justify-content: space-between;
     flex-grow: 1;
     align-items: center;
     background-color: #252525;
@@ -41,7 +42,7 @@ border: none; */
     min-width: 242px;
     width: 80%;
     gap: 12px;
-    margin: auto;
+    margin: 20px auto;
 }
 
 .album-art {
@@ -53,9 +54,11 @@ border: none; */
 
 .song-info {
     display: flex;
+    flex-grow: 1;
     flex-direction: column;
-    justify-content: center;
-    gap: 0px;
+    justify-content: flex-start;
+    align-items: center;
+    gap: 6px;
     word-wrap: break-word;
     overflow-wrap: break-word;
     min-width: 70px;
@@ -64,17 +67,19 @@ border: none; */
 .song-title {
     font-size: 16px;
     font-weight: bold;
+    text-align: center;
     margin: 0;
 }
 
 .artist-name {
     font-size: 14px;
+    text-align: center;
     margin: 0;
 }
 
 .settings-button {
     background-color: #ffffff00;
-    margin-left: auto;
+    /* margin-left: auto; */
     width: 70px;
     min-width: 70px;
     min-height: 70px;

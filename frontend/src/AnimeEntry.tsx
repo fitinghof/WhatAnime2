@@ -161,8 +161,8 @@ const AnimeEntry: React.FC<AnimeEntryProps> = ({ anime, config }) => {
       </div>
       <div className="anisong-info-container">
         <div className="anime-title">{title || "Unknown Anime"}</div>
-        <div className="anisong-info">
-          {showMoreInfo && (
+        {showMoreInfo && (
+          <div className="anisong-info">
             <div className="extra-info">
               <div className="anime-song-separator">Song info</div>
 
@@ -195,57 +195,57 @@ const AnimeEntry: React.FC<AnimeEntryProps> = ({ anime, config }) => {
                   .join(", ")}`}
               </div>
             </div>
-          )}
-          {showMoreInfo && (
-            <div
-              className="extra-info"
-              onClick={() => setShowMoreInfo(!showMoreInfo)}
-            >
-              <div className="anime-song-separator">Anime info</div>
+            {showMoreInfo && (
+              <div
+                className="extra-info"
+                onClick={() => setShowMoreInfo(!showMoreInfo)}
+              >
+                <div className="anime-song-separator">Anime info</div>
 
-              {/* Season */}
-              <div className="anime-info-text">{`${animeIndex}`}</div>
+                {/* Season */}
+                <div className="anime-info-text">{`${animeIndex}`}</div>
 
-              {/* Episodes */}
-              {anime.anime.episodes && (
+                {/* Episodes */}
+                {anime.anime.episodes && (
+                  <div className="anime-info-text">
+                    {`Episodes: ${anime.anime.episodes}`}
+                  </div>
+                )}
+
+                {/* Release date */}
+                {anime.anime.vintage && (
+                  <div className="anime-info-text">
+                    {`Release: ${release_season} ${anime.anime.vintage?.year}`}
+                  </div>
+                )}
+
+                {/* Source */}
+                {source && (
+                  <div className="anime-info-text">{`Source: ${source}`}</div>
+                )}
+
+                {/* Anime Type */}
                 <div className="anime-info-text">
-                  {`Episodes: ${anime.anime.episodes}`}
+                  {`Type: ${anime.anime.anime_type || "Unknown"}`}
                 </div>
-              )}
 
-              {/* Release date */}
-              {anime.anime.vintage && (
-                <div className="anime-info-text">
-                  {`Release: ${release_season} ${anime.anime.vintage.year}`}
-                </div>
-              )}
+                {/* Anime Type */}
+                {anime.anime.genres.length !== 0 && (
+                  <div className="anime-info-text">
+                    {`Genres: ${anime.anime.genres.join(", ")}`}
+                  </div>
+                )}
 
-              {/* Source */}
-              {source && (
-                <div className="anime-info-text">{`Source: ${source}`}</div>
-              )}
-
-              {/* Anime Type */}
-              <div className="anime-info-text">
-                {`Type: ${anime.anime.anime_type || "Unknown"}`}
+                {/* Studios */}
+                {anime.anime.studios.nodes.length !== 0 && false && (
+                  <div className="anime-info-text">
+                    {`Studios: ${anime.anime.studios.nodes.map((a) => a.name).join(", ")}`}
+                  </div>
+                )}
               </div>
-
-              {/* Anime Type */}
-              {anime.anime.genres.length !== 0 && (
-                <div className="anime-info-text">
-                  {`Genres: ${anime.anime.genres.join(", ")}`}
-                </div>
-              )}
-
-              {/* Studios */}
-              {anime.anime.studios.nodes.length !== 0 && false && (
-                <div className="anime-info-text">
-                  {`Studios: ${anime.anime.studios.nodes.map((a) => a.name).join(", ")}`}
-                </div>
-              )}
-            </div>
-          )}
-        </div>
+            )}
+          </div>
+        )}
         {showMoreInfo && linked_ids(anime.anime.linked_ids)}
       </div>
       <div className="right-info-container">
