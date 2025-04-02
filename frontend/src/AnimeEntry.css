@@ -1,6 +1,9 @@
 .anime-item {
     display: flex;
-    flex-grow: 1;
+    flex: 1 1 420px;
+    margin: 0 auto;
+    flex-direction: row;
+    width: auto;
     position: relative;
     gap: 4px;
     justify-content: space-between;
@@ -9,16 +12,13 @@
     padding: 20px;
     border-radius: 12px;
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
-    margin: 0px 10px;
-    width: 80%;
-    min-width: 242px;
-    flex-direction: row;
+    min-width: 220px;
     background-size: cover;
     background-position: center;
     background-repeat: no-repeat;
+
     overflow: hidden;
-    box-sizing: content-box;
-    height: auto;
+    /* height: auto; */
     border: none;
 }
 

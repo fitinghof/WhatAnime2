@@ -94,7 +94,7 @@ where
             let anilist = AnilistAPIR::new();
             loop {
                 counter += 1;
-                if counter == 24 {
+                if counter == 12 {
                     counter = 0;
                     let fetches = utility::update_current_season(
                         &app_state_new.database,

@@ -288,7 +288,7 @@ impl Database for DatabaseR {
                 .push_bind(artist.member_ids);
         });
         query_builder.push(
-            r#" ON CONFLICT DO UPDATE SET
+            r#" ON CONFLICT ( id ) DO UPDATE SET
         names = array_unique(artists.names, EXCLUDED.names),
         group_ids = array_unique(artists.group_ids, EXCLUDED.group_ids),
         member_ids = array_unique(artists.group_ids, EXCLUDED.group_ids),

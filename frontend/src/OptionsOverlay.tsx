@@ -22,7 +22,7 @@ const OptionsOverlay: React.FC<SettingsProp> = ({ settings, hide, onSettingsChan
         <div className="settings-window-overlay">
             <div className="settings-popup-container">
                 <div className="header">
-                    <button className="close-button" onClick={hide}>X</button>
+                    <button className="close-button" onClick={hide}></button>
                     <h2 className="settings-header">Settings</h2>
                 </div>
                 <div className="setting-header">Filters</div>
@@ -48,9 +48,11 @@ const OptionsOverlay: React.FC<SettingsProp> = ({ settings, hide, onSettingsChan
                         Japanese</button>
                 </div>
                 <div className="setting-header">More</div>
-                <button className={`setting-buttons ${settings.romanizeSongInfo ? "on-color" : "off-color"}`}
-                    onClick={() => onSettingsChange({ ...settings, romanizeSongInfo: !settings.romanizeSongInfo })}>
-                    Romanize song info</button>
+                <div className="setting-buttons-container">
+                    <button className={`setting-buttons ${settings.romanizeSongInfo ? "on-color" : "off-color"}`}
+                        onClick={() => onSettingsChange({ ...settings, romanizeSongInfo: !settings.romanizeSongInfo })}>
+                        Romanize song info</button>
+                </div>
             </div>
         </div>
     );

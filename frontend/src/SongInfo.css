@@ -1,48 +1,26 @@
-/* position: relative;
-display: flex;
-flex-grow: 1;
-gap: 4px;
-justify-content: space-between;
-background-color: #252525;
-color: white;
-padding: 20px;
-border-radius: 12px;
-box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
-width: 90%;
-flex-direction: row;
-background-size: cover;
-background-position: center;
-background-repeat: no-repeat;
-overflow: hidden;
-box-sizing: content-box;
-height: auto;
-border: none; */
-
 .now-playing-container {
     display: flex;
     align-items: center;
     justify-content: center;
-    flex-direction: column;
     background: #333333;
-    padding: 20px;
-    max-width: 100%;
-    margin: auto;
+    margin-top: 20px;
+    margin-bottom: 20px;
+    margin-left: min(30px, 5%);
+    margin-right: min(30px, 5%);
 }
 
 .now-playing {
     display: flex;
     justify-content: space-between;
-    flex-grow: 1;
+    flex: 1 1 0;
     align-items: center;
     background-color: #252525;
     color: white;
     padding: 20px;
     border-radius: 12px;
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
-    min-width: 242px;
-    width: 80%;
+    min-width: 220px;
     gap: 12px;
-    margin: 20px auto;
 }
 
 .album-art {
