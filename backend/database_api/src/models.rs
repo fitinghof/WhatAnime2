@@ -34,6 +34,7 @@ pub struct DBAnime {
     pub season_year: Option<i32>,
 }
 
+#[derive(Debug)]
 pub struct Report {
     pub track_id: Option<SpotifyTrackID>,
     pub song_ann_id: Option<SongAnnId>,

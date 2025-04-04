@@ -146,6 +146,32 @@ pub fn select_best(
     )
 }
 
+pub fn select_best_by_song_title(anisongs: Vec<DBAnisong>, song_title: &str) -> NewSongHit {
+    if anisongs.is_empty() {
+        return NewSongHit {
+            hits: vec![],
+            more_by_artists: vec![],
+            certainty: 0,
+        };
+    }
+    let mut best_score = 0.0;
+    let mut best_id = anisongs[0].song.id;
+    for anisong in &anisongs {
+        let score = process_similarity(song_title, &anisong.song.name);
+        if score > best_score {
+            best_score = score;
+            best_id = anisong.song.id;
+        }
+    }
+    let (hits, more_by_artists): (Vec<_>, Vec<_>) =
+        anisongs.into_iter().partition(|a| a.song.id == best_id);
+    NewSongHit {
+        hits,
+        more_by_artists,
+        certainty: best_score as i32,
+    }
+}
+
 pub async fn update_current_season<D, A, B>(db: &D, anisong: &A, anilist: &B) -> u64
 where
     D: Database + 'static + Send + Sync,

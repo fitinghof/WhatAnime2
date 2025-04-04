@@ -50,7 +50,7 @@ pub struct URL(String);
 #[sqlx(transparent)]
 pub struct ImageURL(URL);
 
-#[derive(Deserialize, Serialize)]
+#[derive(Deserialize, Serialize, Debug)]
 pub struct SpotifyUser {
     pub display_name: Option<String>,
     pub email: Option<String>,

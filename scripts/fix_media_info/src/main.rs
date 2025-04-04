@@ -110,6 +110,7 @@ async fn main() {
             season_year: b.season_year,
         },
     );
-
+    let amount = updated_animes.len();
     db.add_animes(updated_animes).await;
+    println!("updated {} animes", amount);
 }

@@ -27,7 +27,7 @@ use crate::what_anime::utility::select_best;
 use super::{
     FRONTEND_PORT,
     models::{self, NewSongHit, NewSongMiss, SongInfo, SongUpdate},
-    utility::pair_artists,
+    utility::{pair_artists, select_best_by_song_title},
 };
 
 pub struct AppState<D, S, A>
@@ -67,7 +67,7 @@ pub struct UpdateParams {
     refresh: Option<bool>,
 }
 
-const AUTO_BIND_LIMIT: f32 = 90.0;
+const AUTO_BIND_LIMIT: f32 = 80.0;
 
 pub async fn update<D, S, A>(
     State(app_state): State<Arc<AppState<D, S, A>>>,
@@ -148,21 +148,22 @@ where
                     .database
                     .get_anisongs_by_artist_ids(t.artists.iter().map(|a| a.id.clone()).collect())
                     .await;
+
                 if !anisongs.is_empty() {
-                    let (mut song, artist_pairs) =
-                        select_best(anisongs, t.name.clone(), t.artists.clone());
+                    let mut song = select_best_by_song_title(anisongs, &t.name);
                     if song.certainty >= AUTO_BIND_LIMIT as i32 {
                         song.certainty = 100;
-                        let artist_binds = artist_pairs
-                            .into_iter()
-                            .filter_map(|a| {
-                                if a.2 > AUTO_BIND_LIMIT {
-                                    Some((a.1.id, a.0.id))
-                                } else {
-                                    None
-                                }
-                            })
-                            .collect();
+                        let artist_binds =
+                            pair_artists(t.artists.clone(), song.hits[0].song.artists.clone())
+                                .into_iter()
+                                .filter_map(|a| {
+                                    if a.2 > AUTO_BIND_LIMIT {
+                                        Some((a.1.id, a.0.id))
+                                    } else {
+                                        None
+                                    }
+                                })
+                                .collect();
                         app_state.database.bind_artists(artist_binds).await;
                         let best_id = song.hits[0].song.id.expect("From database must be Some");
                         app_state
@@ -350,8 +351,8 @@ where
         let user = app_state.spotify_api.get_user(token.access_token).await;
         if let Ok(user) = user {
             info!(
-                "{:?} added bind for {:?}",
-                user.display_name, params.song_id
+                "{:?} added bind for {:?}\nhttps://open.spotify.com/track/{}",
+                user.display_name, params.song_id, params.spotify_song_id
             );
             app_state
                 .database
@@ -397,7 +398,6 @@ where
         Ok(u) => u,
         Err(_) => return Err(axum::http::StatusCode::INTERNAL_SERVER_ERROR),
     };
-    info!("{:?} made a repport!", user.display_name.clone());
 
     let report = Report {
         track_id: params.track_id,
@@ -405,6 +405,8 @@ where
         message: params.message,
         user,
     };
+
+    info!("A report was made!\n{:#?}", &report);
     app_state.database.add_report(report).await;
     Ok(())
 }

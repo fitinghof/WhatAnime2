@@ -9,7 +9,7 @@ use anisong_api::models::{Anisong, AnisongAnime, AnisongArtistID, AnisongBind, A
 use models::{DBAnime, DBAnisong, DBAnisongBind, Report, SimplifiedAnisongSong, SimplifiedArtist};
 
 use sqlx::QueryBuilder;
-use sqlx::migrate;
+// use sqlx::migrate;
 use sqlx::{self, Postgres, postgres::PgPoolOptions};
 use what_anime_shared::{SongID, SpotifyArtistID, SpotifyTrackID, URL};
 
@@ -86,10 +86,10 @@ impl DatabaseR {
             .await
             .expect("Failed to create the pool");
 
-        migrate!("./migrations")
-            .run(&pool)
-            .await
-            .expect("Migrations failed");
+        // migrate!("./migrations")
+        //     .run(&pool)
+        //     .await
+        //     .expect("Migrations failed");
 
         Self { pool }
     }
@@ -456,7 +456,6 @@ impl Database for DatabaseR {
         self.add_artists(artists).await;
     }
     async fn add_report(&self, report: Report) {
-        println!("User: {:?}\nSpotify: {:?}", report.user.id, report.track_id);
         sqlx::query::<Postgres>(
             "INSERT INTO reports (track_id, ann_song_id, message, user_name, user_mail, user_id) VALUES ($1, $2, $3, $4, $5, $6)",
         )
