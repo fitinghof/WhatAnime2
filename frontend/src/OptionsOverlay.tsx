@@ -6,6 +6,7 @@ interface SettingsProp {
     settings: Settings,
     hide: () => void,
     onSettingsChange: (settings: Settings) => void,
+    openReport: () => void,
 }
 
 export interface Settings {
@@ -17,7 +18,7 @@ export interface Settings {
     language: Language,
 }
 
-const OptionsOverlay: React.FC<SettingsProp> = ({ settings, hide, onSettingsChange }) => {
+const OptionsOverlay: React.FC<SettingsProp> = ({ settings, hide, onSettingsChange, openReport }) => {
     return (
         <div className="settings-window-overlay">
             <div className="settings-popup-container">
@@ -53,8 +54,14 @@ const OptionsOverlay: React.FC<SettingsProp> = ({ settings, hide, onSettingsChan
                         onClick={() => onSettingsChange({ ...settings, romanizeSongInfo: !settings.romanizeSongInfo })}>
                         Romanize song info</button>
                 </div>
+
+
+                {/* Seperator */}
+                <div style={{ marginBottom: "30px" }}></div>
+
+                <div className="settings-report-button" onClick={openReport}>Report</div>
             </div>
-        </div>
+        </div >
     );
 };
 

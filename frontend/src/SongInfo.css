@@ -32,27 +32,32 @@
 
 .song-info {
     display: flex;
+    width: inherit;
     flex-grow: 1;
     flex-direction: column;
     justify-content: flex-start;
     align-items: center;
     gap: 6px;
-    word-wrap: break-word;
-    overflow-wrap: break-word;
     min-width: 70px;
 }
 
 .song-title {
+    display: flex;
+    width: auto;
     font-size: 16px;
     font-weight: bold;
     text-align: center;
     margin: 0;
+    word-wrap: break-word;
+    overflow-wrap: anywhere; 
 }
 
 .artist-name {
     font-size: 14px;
     text-align: center;
     margin: 0;
+    word-wrap: break-word;
+    overflow-wrap: anywhere; 
 }
 
 .settings-button {

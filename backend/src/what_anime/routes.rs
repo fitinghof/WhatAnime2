@@ -404,6 +404,7 @@ where
         song_ann_id: params.ann_song_id,
         message: params.message,
         user,
+        status: database_api::models::ReportStatus::Pending,
     };
 
     info!("A report was made!\n{:#?}", &report);

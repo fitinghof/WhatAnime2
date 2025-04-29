@@ -156,7 +156,8 @@ mod tests {
                 AnilistAnimeID(20651),
                 AnilistAnimeID(14653),
             ])
-            .await;
+            .await
+            .unwrap();
         assert!(animes.len() == 3);
     }
 }

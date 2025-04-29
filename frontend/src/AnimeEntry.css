@@ -63,12 +63,11 @@
     text-align: center;
     order: 1;
     flex-grow: 1;
-    /* pointer-events: none; */
     width: auto;
     gap: 5px;
-    word-wrap: break-word;
-    overflow-wrap: break-word;
     min-width: 70px;
+    word-wrap: break-word;
+    overflow-wrap: anywhere; 
 }
 
 .anisong-info {
@@ -88,8 +87,8 @@
 
 .extra-info {
     display: block;
-    word-wrap: break-word;
-    overflow-wrap: break-word;
+    /* word-wrap: break-word;
+    overflow-wrap: break-word; */
     text-wrap: balance;
     width: 48%;
     min-width: 70px;
@@ -99,8 +98,6 @@
 .anime-title {
     font-size: 16px;
     font-weight: bold;
-    word-wrap: break-word;
-    overflow-wrap: break-word;
 }
 
 .anime-info-text {

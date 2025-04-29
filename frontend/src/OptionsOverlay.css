@@ -102,6 +102,21 @@
     background-color: #7a2a2a;
 }
 
+.settings-report-button {
+    color: azure;
+    width: fit-content;
+    height: auto;
+    background: #800606;
+    padding: 8px 12px;
+    margin: auto auto 0 auto;
+    align-items: center;
+    justify-content: center;
+    border-style: none;
+    border-radius: 8%;
+
+    cursor: pointer;
+}
+
 .setting-buttons {
     color: azure;
     width: fit-content;
@@ -115,7 +130,7 @@
 
     cursor: pointer;
 }
-
+.settings-report-button:hover,
 .setting-buttons:hover {
     filter: brightness(65%);
 }

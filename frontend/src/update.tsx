@@ -126,25 +126,30 @@ const Update = () => {
 
             {showSettings && (
                 <OptionsOverlay settings={settings} hide={() => setShowSettings(false)}
-                    onSettingsChange={onSettingsUpdate}></OptionsOverlay>
+                    onSettingsChange={onSettingsUpdate} openReport={() => {
+                        setReportOverlay((p) => ({ ...p, show: true, }));
+                        setShowSettings(false);
+                    }}>
+                </OptionsOverlay >
             )}
 
             <SongContainer song_info={info.song_info} showSettingsOverlay={() => setShowSettings(true)} romanizeContent={settings.romanizeSongInfo}>
             </SongContainer>
 
-            {"hit" in info.anisongs ? (
-                <>
-                    <AnimeList animes={info.anisongs.hit.hits}
-                        list_config={{ ...list_config, seperator: `Match ${info.anisongs.hit.certainty} %` }}></AnimeList>
-                    <AnimeList animes={info.anisongs.hit.more_by_artists}
-                        list_config={{ ...list_config, seperator: "More by artists" }}></AnimeList>
-                </>
-            ) : "miss" in info.anisongs ? (
-                <>
-                    <AnimeList animes={info.anisongs.miss.possible}
-                        list_config={{ ...list_config, seperator: "Possible matches" }}></AnimeList>
-                </>
-            ) : null // null case should be impossible
+            {
+                "hit" in info.anisongs ? (
+                    <>
+                        <AnimeList animes={info.anisongs.hit.hits}
+                            list_config={{ ...list_config, seperator: `Match ${info.anisongs.hit.certainty} %` }}></AnimeList>
+                        <AnimeList animes={info.anisongs.hit.more_by_artists}
+                            list_config={{ ...list_config, seperator: "More by artists" }}></AnimeList>
+                    </>
+                ) : "miss" in info.anisongs ? (
+                    <>
+                        <AnimeList animes={info.anisongs.miss.possible}
+                            list_config={{ ...list_config, seperator: "Possible matches" }}></AnimeList>
+                    </>
+                ) : null // null case should be impossible
             }
         </>
     );

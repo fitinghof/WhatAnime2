@@ -9,7 +9,10 @@ use database_api::{
     models::{DBAnime, DBAnisongBind, SimplifiedAnisongSong},
 };
 use dotenvy;
-use std::{collections::HashMap, io};
+use std::{
+    collections::{HashMap, HashSet},
+    io,
+};
 use what_anime_shared::{AnilistAnimeID, ReleaseSeason};
 
 async fn scrape_season(
@@ -21,20 +24,34 @@ async fn scrape_season(
     let anisongs = anisong.get_anime_season(release).await.unwrap();
     let song_amount = anisongs.len();
 
-    db.add_from_anisongs(anisongs, anilist).await;
+    let ids: HashSet<what_anime_shared::AnilistAnimeID> = anisongs
+        .iter()
+        .filter_map(|a| a.anime.linked_ids.anilist)
+        .collect();
+    let mut media: Vec<anilist_api::Media> = Vec::with_capacity(ids.len());
+
+    let mut ticker = tokio::time::interval(tokio::time::Duration::from_secs(1));
+    let ids: Vec<_> = ids.into_iter().collect();
+    for chunk in ids.chunks(50) {
+        ticker.tick().await;
+        let mut new = match anilist.fetch_many(chunk.to_vec()).await {
+            Ok(m) => m,
+            Err(e) => {
+                log::error!("Got error from anilist_api, Error {:?}", e);
+                vec![]
+            }
+        };
+        media.append(&mut new);
+    }
+
+    db.add_from_anisongs(anisongs, media).await;
     song_amount
+    // todo!()
 }
 
-#[tokio::main]
-async fn main() {
-    env_logger::Builder::new()
-        .filter_level(log::LevelFilter::Info)
-        .filter_module("tracing", log::LevelFilter::Warn)
-        .target(env_logger::Target::Stdout)
-        .init();
-
+pub async fn fetch_anisong() -> bool {
     let year = chrono::Local::now().year();
-    match dotenvy::from_path("../../dev.env") {
+    match dotenvy::from_path("../dev.env") {
         Ok(_) => {}
         Err(e) => {
             eprintln!("{}", e);
@@ -59,12 +76,12 @@ async fn main() {
         Ok(v) => v,
         Err(e) => {
             eprintln!("Invalid input: {}, exiting...", e);
-            return;
+            return false;
         }
     };
     if start_season < 1 || start_season > 4 {
         eprintln!("Invalid number, select a number between 1 and 4, including 4, exiting...");
-        return;
+        return false;
     }
     println!("Input start year\n");
     inp.clear();
@@ -75,7 +92,7 @@ async fn main() {
         Ok(v) => v,
         Err(_) => {
             eprintln!("Invalid input, exiting...");
-            return;
+            return false;
         }
     };
     if start_year < 1951 || start_year > (year + 1) as u32 {
@@ -84,7 +101,7 @@ async fn main() {
             year + 1,
             year + 1
         );
-        return;
+        return false;
     }
     // end date
     println!(
@@ -103,12 +120,12 @@ async fn main() {
         Ok(v) => v,
         Err(_) => {
             eprintln!("Invalid input, exiting...");
-            return;
+            return false;
         }
     };
     if end_season < 1 || end_season > 4 {
         eprintln!("Invalid number, select a number between 1 and 4, including 4, exiting...");
-        return;
+        return false;
     }
     println!("Input end year\n");
     inp.clear();
@@ -119,7 +136,7 @@ async fn main() {
         Ok(v) => v,
         Err(_) => {
             eprintln!("Invalid input, exiting...");
-            return;
+            return false;
         }
     };
     if end_year < 1951 || end_year > (year + 1) as u32 {
@@ -128,13 +145,11 @@ async fn main() {
             year + 1,
             year + 1
         );
-        return;
+        return false;
     }
     if end_year < start_year || ((end_year == start_year) && end_season < start_season) {
-        eprintln!(
-            "End cannot be before start",
-        );
-        return;
+        eprintln!("End cannot be before start",);
+        return false;
     }
 
     let anisong = AnisongAPIR::new();
@@ -163,7 +178,7 @@ async fn main() {
         );
         if start_season == end_season && start_year == end_year {
             println!("Data fetch done!");
-            return;
+            return true;
         } else {
             start_season += 1;
             if start_season == 4 {

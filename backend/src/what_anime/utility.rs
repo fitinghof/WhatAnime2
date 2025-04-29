@@ -181,7 +181,7 @@ where
     let now = chrono::Local::now();
     let year = now.year();
     let month = now.month();
-    let season = match ReleaseSeason::try_from((month - 1) / 4) {
+    let season = match ReleaseSeason::try_from(month / 4) {
         Ok(s) => s,
         Err(e) => {
             error!("How? Error: {:?}", e);

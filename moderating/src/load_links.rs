@@ -5,8 +5,7 @@ use dotenvy;
 use std::{fs::File, io::Read};
 use what_anime_shared::SpotifyArtistID;
 
-#[tokio::main]
-async fn main() {
+pub async fn load_links() -> bool {
     dotenvy::from_path("../../dev.env").ok();
 
     let mut file = File::open("data.csv").expect("Failed to open file");
@@ -32,4 +31,5 @@ async fn main() {
 
     let db = DatabaseR::new(1).await;
     println!("Inserted rows: {}", db.bind_artists(lines).await);
+    true
 }

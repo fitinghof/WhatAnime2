@@ -4,7 +4,10 @@ use anilist_api::models::*;
 pub use anisong_api::models::AnisongArtistID;
 use anisong_api::models::*;
 use serde::{Deserialize, Serialize};
-use sqlx::{FromRow, Row, postgres::PgRow};
+use sqlx::{
+    Decode, Encode, FromRow, Postgres, Row,
+    postgres::{PgRow, PgTypeInfo},
+};
 
 use what_anime_shared::{ImageURL, ReleaseSeason, SongID, SpotifyTrackID, SpotifyUser};
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -35,11 +38,87 @@ pub struct DBAnime {
 }
 
 #[derive(Debug)]
+pub enum ReportStatus {
+    Pending,
+    InProgress,
+    Resolved,
+    Dismissed,
+}
+
+impl Decode<'_, Postgres> for ReportStatus {
+    fn decode(
+        value: <Postgres as sqlx::Database>::ValueRef<'_>,
+    ) -> Result<Self, sqlx::error::BoxDynError> {
+        let s = <&str as sqlx::Decode<sqlx::Postgres>>::decode(value)?;
+        Ok(match s {
+            "pending" => Self::Pending,
+            "in_progress" => Self::InProgress,
+            "resolved" => Self::Resolved,
+            "dismissed" => Self::Dismissed,
+            _ => return Err(format!("Failed to parse value {}", s).into()),
+        })
+    }
+}
+
+impl Encode<'_, Postgres> for ReportStatus {
+    fn encode(
+        self,
+        buf: &mut <Postgres as sqlx::Database>::ArgumentBuffer<'_>,
+    ) -> Result<sqlx::encode::IsNull, sqlx::error::BoxDynError>
+    where
+        Self: Sized,
+    {
+        let s = match self {
+            Self::Pending => "pending",
+            Self::InProgress => "in_progress",
+            Self::Resolved => "resolved",
+            Self::Dismissed => "dismissed",
+        };
+        <&str as sqlx::Encode<sqlx::Postgres>>::encode(&s, buf)
+    }
+
+    fn encode_by_ref(
+        &self,
+        buf: &mut <Postgres as sqlx::Database>::ArgumentBuffer<'_>,
+    ) -> Result<sqlx::encode::IsNull, sqlx::error::BoxDynError> {
+        let s = match self {
+            Self::Pending => "pending",
+            Self::InProgress => "in_progress",
+            Self::Resolved => "resolved",
+            Self::Dismissed => "dismissed",
+        };
+        <&str as sqlx::Encode<sqlx::Postgres>>::encode(&s, buf)
+    }
+}
+
+impl sqlx::Type<sqlx::Postgres> for ReportStatus {
+    fn type_info() -> PgTypeInfo {
+        PgTypeInfo::with_name("report_status")
+    }
+}
+#[derive(Debug)]
 pub struct Report {
     pub track_id: Option<SpotifyTrackID>,
     pub song_ann_id: Option<SongAnnId>,
     pub message: String,
     pub user: SpotifyUser,
+    pub status: ReportStatus,
+}
+impl FromRow<'_, PgRow> for Report {
+    fn from_row(row: &PgRow) -> Result<Self, sqlx::Error> {
+        let user = SpotifyUser {
+            display_name: row.get("user_name"),
+            email: row.get("user_mail"),
+            id: row.get("user_id"),
+        };
+        Ok(Self {
+            track_id: row.get("track_id"),
+            song_ann_id: row.get("ann_song_id"),
+            message: row.get("message"),
+            user,
+            status: row.get("status"),
+        })
+    }
 }
 
 impl From<(AnisongAnime, Option<Media>)> for DBAnime {
