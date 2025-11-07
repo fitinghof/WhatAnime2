@@ -448,3 +448,12 @@ pub struct DBAnisongBind {
     pub song_index: SongIndex,
     pub is_rebroadcast: bool,
 }
+
+#[derive(Serialize, Deserialize, Debug, Clone, FromRow)]
+pub struct DBUser {
+    name: String,
+    mail: String,
+    id: String,
+    binds: i32,
+    flags: i64,
+}
