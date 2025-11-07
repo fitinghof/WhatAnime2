@@ -293,7 +293,7 @@ where
         )
         .await;
 
-    match res {
+    let token = match res {
         Err(e) => match e {
             _ => return Err(axum::http::StatusCode::INTERNAL_SERVER_ERROR),
         },
@@ -303,20 +303,40 @@ where
                 .expect("Time went backwards")
                 .as_secs()
                 + v.expires_in;
-            let res = insert_token_data(session.clone(), v).await;
+            let res = insert_token_data(session.clone(), v.clone()).await;
             match res {
-                Ok(_) => {}
+                Ok(()) => v,
                 Err(e) => {
                     error!("Token insertion failed: {}", e);
                     return Err(axum::http::StatusCode::INTERNAL_SERVER_ERROR);
                 }
             }
         }
-    }
+    };
 
     session.save().await.unwrap();
 
-    return Ok(Redirect::to(&format!("https://whatanime.sibbeeegold.dev",)));
+    let user = app_state.spotify_api.get_user(token.access_token).await;
+    if let Ok(user) = user {
+        let mut db_user = app_state.database.get_user(user.id.clone()).await;
+        if db_user.is_none() {
+            db_user = Some(database_api::models::DBUser {
+                name: user.display_name,
+                mail: user.email,
+                id: user.id,
+                binds: 0,
+                flags: 0,
+            });
+            let _ = app_state
+                .database
+                .add_user(db_user.as_ref().unwrap().clone())
+                .await;
+            // Errors? hopefully not
+        }
+        let _ = session.insert("user", db_user.unwrap()).await;
+    }
+
+    return Ok(Redirect::to(&format!("https://whatanime.sibbeeegold.dev")));
 }
 
 #[derive(Deserialize)]

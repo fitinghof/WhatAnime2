@@ -11,7 +11,9 @@ use models::{DBAnime, DBAnisong, DBAnisongBind, Report, SimplifiedAnisongSong, S
 use sqlx::QueryBuilder;
 // use sqlx::migrate;
 use sqlx::{self, Postgres, postgres::PgPoolOptions};
-use what_anime_shared::{SongID, SpotifyArtistID, SpotifyTrackID, URL};
+use what_anime_shared::{SongID, SpotifyArtistID, SpotifyTrackID, SpotifyUserID, URL};
+
+use crate::models::DBUser;
 
 pub mod models;
 pub mod regex;
@@ -66,6 +68,11 @@ pub trait Database {
         whole_word_match: bool,
         case_sensitive: bool,
     ) -> impl std::future::Future<Output = Vec<DBAnisong>> + Send;
+    fn get_user(
+        &self,
+        user_id: SpotifyUserID,
+    ) -> impl std::future::Future<Output = Option<DBUser>> + Send;
+    fn add_user(&self, user: DBUser) -> impl std::future::Future<Output = Result<(), ()>> + Send;
 }
 
 pub struct DatabaseR {
@@ -536,6 +543,39 @@ impl Database for DatabaseR {
         .fetch_all(&self.pool)
         .await
         .unwrap()
+    }
+
+    async fn get_user(&self, user_id: SpotifyUserID) -> Option<DBUser> {
+        sqlx::query_as::<Postgres, DBUser>(
+            r#"
+            SELECT * FROM users WHERE id = $1
+        "#,
+        )
+        .bind(user_id)
+        .fetch_one(&self.pool)
+        .await
+        .ok()
+    }
+    async fn add_user(&self, user: DBUser) -> Result<(), ()> {
+        match sqlx::query(
+            r#"
+                    INSERT INTO users (name, mail, id, binds, flags) VALUES($1, $2, $3, $4, $5)
+                "#,
+        )
+        .bind(user.name)
+        .bind(user.mail)
+        .bind(user.id)
+        .bind(user.binds)
+        .bind(user.flags)
+        .execute(&self.pool)
+        .await
+        {
+            Ok(_) => Ok(()),
+            Err(e) => {
+                println!("{}", e);
+                Err(())
+            }
+        }
     }
 }
 

@@ -44,7 +44,7 @@ pub struct Response {
     pub item: Item,
 }
 
-#[derive(Deserialize, Serialize)]
+#[derive(Deserialize, Serialize, Clone)]
 pub struct TokenResponse {
     pub access_token: SpotifyToken,
     pub refresh_token: Option<SpotifyToken>,

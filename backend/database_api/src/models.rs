@@ -9,7 +9,9 @@ use sqlx::{
     postgres::{PgRow, PgTypeInfo},
 };
 
-use what_anime_shared::{ImageURL, ReleaseSeason, SongID, SpotifyTrackID, SpotifyUser};
+use what_anime_shared::{
+    ImageURL, ReleaseSeason, SongID, SpotifyTrackID, SpotifyUser, SpotifyUserID,
+};
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct DBAnime {
     // AnisongDB stuff
@@ -451,9 +453,9 @@ pub struct DBAnisongBind {
 
 #[derive(Serialize, Deserialize, Debug, Clone, FromRow)]
 pub struct DBUser {
-    name: String,
-    mail: String,
-    id: String,
-    binds: i32,
-    flags: i64,
+    pub name: Option<String>,
+    pub mail: Option<String>,
+    pub id: SpotifyUserID,
+    pub binds: i32,
+    pub flags: i64,
 }
