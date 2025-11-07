@@ -69,8 +69,7 @@ where
                 client_id,
                 client_secret,
                 redirect_uri: Url::from_str(&format!(
-                    "http://whatanime.ddns.net:{}/callback",
-                    BACKEND_PORT
+                    "https://apiwhatanime.sibbeeegold.dev/callback"
                 ))
                 .expect("redirect must be valid str"),
             }),
@@ -80,9 +79,11 @@ where
     pub async fn run(&self) {
         let session_store = MemoryStore::default();
         let session_layer = SessionManagerLayer::new(session_store)
-            .with_secure(false)
-            .with_same_site(cookie::SameSite::Lax)
-            .with_always_save(true);
+            .with_secure(true)
+            .with_same_site(cookie::SameSite::None)
+            .with_always_save(true)
+            .with_domain("sibbeeegold.dev")
+            .with_http_only(true);
 
         //.with_expiry(Expiry::OnInactivity(Duration::seconds(10)));
 
@@ -115,17 +116,20 @@ where
             format!("http://localhost:{}", FRONTEND_PORT)
                 .parse::<HeaderValue>()
                 .unwrap(),
-            format!("http://whatanime.ddns.net:{}", FRONTEND_PORT)
+            format!("https://whatanime.sibbeeegold.dev:{}", FRONTEND_PORT)
+                .parse::<HeaderValue>()
+                .unwrap(),
+            format!("https://whatanime.sibbeeegold.dev")
                 .parse::<HeaderValue>()
                 .unwrap(),
         ];
 
         let app = Router::new()
-            .route("/api/update", get(update))
-            .route("/api/login", get(login))
+            .route("/update", get(update))
+            .route("/login", get(login))
             .route("/callback", get(callback))
-            .route("/api/confirm_anime", post(confirm_anime))
-            .route("/api/report", post(report))
+            .route("/confirm_anime", post(confirm_anime))
+            .route("/report", post(report))
             .layer(session_layer)
             .layer(
                 CorsLayer::new()

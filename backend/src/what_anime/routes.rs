@@ -79,8 +79,6 @@ where
     S: SpotifyAPI + Send + Sync + 'static,
     A: AnisongAPI + Send + Sync + 'static,
 {
-    // session.load().await.unwrap();
-
     let token = get_token_data(
         session.clone(),
         &app_state.spotify_api,
@@ -318,10 +316,7 @@ where
 
     session.save().await.unwrap();
 
-    return Ok(Redirect::to(&format!(
-        "http://whatanime.ddns.net:{}/",
-        FRONTEND_PORT
-    )));
+    return Ok(Redirect::to(&format!("https://whatanime.sibbeeegold.dev",)));
 }
 
 #[derive(Deserialize)]
